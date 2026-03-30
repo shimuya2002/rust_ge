@@ -1,0 +1,13 @@
+[package]
+name = "rust_ge"
+version = "0.1.0"
+edition = "2024"
+
+[build-dependencies]
+bindgen = "*"
+
+[features]
+default=["non_bindings","use_sdl3"]
+non_bindings=[]
+use_sdl3=[]
+use_sdl2=[]
