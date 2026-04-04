@@ -18,7 +18,6 @@ mod ui_menu;
 mod ui_window;
 mod ui_menubar;
 mod ui_popup;
-mod point;
 mod anim_set;
 mod game_app_event;
 use std::ffi::*;

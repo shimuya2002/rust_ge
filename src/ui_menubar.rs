@@ -2,16 +2,15 @@ use std::ffi::*;
 use std::cmp::*;
 use crate::imports::*;
 use crate::app::*;
-use crate::size::*;
 use crate::config::*;
-use crate::point::*;
+use crate::geometory::*;
 use crate::ui_item::*;
 use crate::ui_menu::*;
 use crate::ui_popup::*;
 ///Menubar UI
 pub struct Menubar{
     sub_menus:Vec<MenuItem>,//画面上部に表示される内容
-    pub rect:SDL_Rect,//メニューバーの領域
+    pub rect:RectType,//メニューバーの領域
 }
 impl Menubar{
     ///# 引数
@@ -19,26 +18,51 @@ impl Menubar{
     pub fn new(items:Vec<MenuItem>)->Self{
         return Self{
             sub_menus:items,
-            rect:SDL_Rect{x:0,y:0,w:0,h:0}
+            rect:gen_rect_i32(0,0,0,0)
         };
     }
-    pub fn set_rect(&mut self,app:&App,preffered_rect:&SDL_Rect){
+    pub fn set_rect(&mut self,app:&App,preffered_rect:&RectType){
         self.rect=*preffered_rect;
         let mut child_pref_rect=*preffered_rect;
-        child_pref_rect.x=child_pref_rect.x+UI_BORDER_SIZE;
-        child_pref_rect.w=child_pref_rect.w-UI_BORDER_SIZE;
+        {
+
+# [cfg(feature="use_sdl3")]
+            let ret_x=child_pref_rect.x+UI_BORDER_SIZE as f32;
+# [cfg(feature="use_sdl2")]
+            let ret_x=child_pref_rect.x+UI_BORDER_SIZE;
+            child_pref_rect.x=ret_x;
+# [cfg(feature="use_sdl3")]
+            let ret_w=child_pref_rect.w-UI_BORDER_SIZE as f32;
+# [cfg(feature="use_sdl2")]
+            let ret_w=child_pref_rect.w-UI_BORDER_SIZE;
+            child_pref_rect.w=ret_w;
+        }
         let mut max_h=0;
         for mut i in &mut self.sub_menus{
             let r=i.set_rect(app,&child_pref_rect);
             if (r.x+r.w)>(child_pref_rect.x+child_pref_rect.w){
                 break;
             }
-            child_pref_rect.x=child_pref_rect.x+r.w+UI_BORDER_SIZE;
-            child_pref_rect.w=child_pref_rect.w-r.w-UI_BORDER_SIZE;
-            max_h=max(max_h,r.h);
+# [cfg(feature="use_sdl3")]
+            let ret_x=child_pref_rect.x+r.w+(UI_BORDER_SIZE as f32);
+# [cfg(feature="use_sdl2")]
+            let ret_x=child_pref_rect.x+r.w+UI_BORDER_SIZE;
+
+            child_pref_rect.x=ret_x;
+# [cfg(feature="use_sdl3")]
+            let ret_w=child_pref_rect.w-r.w-(UI_BORDER_SIZE as f32);
+# [cfg(feature="use_sdl2")]
+            let ret_w=child_pref_rect.w-r.w-UI_BORDER_SIZE;
+            child_pref_rect.w=ret_w;
+            max_h=max(max_h,r.h as i32);
 
         }
-        self.rect.h=max_h+8;
+# [cfg(feature="use_sdl3")]
+        let ret_h=(max_h+8) as f32;
+# [cfg(feature="use_sdl2")]
+        let ret_h=max_h+8;
+        
+        self.rect.h=ret_h;
 
     }
     pub fn render(&self,app:&mut App){
@@ -77,12 +101,18 @@ impl Menubar{
                             }
                         }else{
                             if PointInRect(po,&i.rect){
-                                let tmp=SDL_Rect{
+# [cfg(feature="use_sdl3")]
+                                let tmp=RectType{
                                     x:i.rect.x,
                                     y:i.rect.y+i.rect.h,
-                                    w:WND_W-i.rect.x,
-                                    h:WND_H-i.rect.y
+                                    w:(WND_W as f32) -i.rect.x,
+                                    h:(WND_H as f32)-i.rect.y
                                 };
+# [cfg(feature="use_sdl2")]
+                                let tmp=gen_rect_i32(i.rect.x,
+                                            i.rect.y+i.rect.h,
+                                            WND_W -i.rect.x,
+                                            WND_H-i.rect.y);
                                 ppm.open(app,&tmp);
                                 return true;
                             }

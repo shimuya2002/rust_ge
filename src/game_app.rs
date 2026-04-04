@@ -12,12 +12,12 @@ use crate::game_app_event::*;
 use crate::sb_state::*;
 use crate::sb_cmdtype::*;
 use crate::geometory::*;
+include!("./geometory_inc.rs");
 
-const ZeroRect:SDL_Rect=SDL_Rect{x:0,y:0,w:0,h:0};
-const BgImageRect:SDL_Rect=SDL_Rect{x:0,y:0,w:WND_W,h:WND_H};
-const LeftBustupImageRect:SDL_Rect=SDL_Rect{x:0,y:0,w:WND_W/2,h:WND_H};
-const RightBustupImageRect:SDL_Rect=SDL_Rect{x:WND_W/2,y:0,w:WND_W/2,h:WND_H};
-const TextAreaRect:SDL_Rect=SDL_Rect{x:0,y:WND_H-MSG_TEXT_SIZE*6,w:WND_W,h:MSG_TEXT_SIZE*6};
+const BgImageRect:RectType=rect_type![0,0,WND_W,WND_H];
+const LeftBustupImageRect:RectType=rect_type![0,0,WND_W/2,WND_H];
+const RightBustupImageRect:RectType=rect_type![WND_W/2,0,WND_W/2,WND_H];
+const TextAreaRect:RectType=rect_type![0,WND_H-MSG_TEXT_SIZE*6,WND_W,MSG_TEXT_SIZE*6];
 ///レンダリングモード
 #[derive(Clone)]
 pub enum RENDER_MODE{
@@ -59,7 +59,7 @@ pub struct SelectionInfo{
     ///* 'msg' 選択肢で」表示するメッセージ
     pub msg:String,
     ///* 'rect' 画面内の選択肢を表示する位置 
-    pub rect:SDL_Rect,
+    pub rect:RectType,
 }
 
 /// ゲームアプリ管理オブジェクト
@@ -90,9 +90,9 @@ pub struct GameApp{
     ///* 'menu_bar' 画面上部に表示されているメニューバー
     menu_bar:Menubar,
     ///* 'image_origin_rect_tbl' 画面内の表示位置が決まっているイメージの位置座標
-    image_origin_rect_tbl:[SDL_Rect;4],
+    image_origin_rect_tbl:[RectType;4],
     //
-    blt_rect_tbl:[SDL_Rect;4],
+    blt_rect_tbl:[RectType;4],
     ///* 'script' 実行中のスクリプト
     script:Option<SB_State>,
     ///* 'selections' 画面に表示されている選択肢
@@ -138,7 +138,7 @@ impl GameApp{
     }
     ///* 初期化イベント処理
     pub fn on_init(&mut self){
-        self.menu_bar.set_rect(&self.app,&SDL_Rect{x:0,y:0,w:640,h:480});
+        self.menu_bar.set_rect(&self.app,&rect_type![0,0,640,480]);
 
     }
     ///* ゲーム更新イベント処理
@@ -160,8 +160,7 @@ impl GameApp{
 
         }
         if let Some(mode)=&self.show_left{
-            let src_rect=SDL_Rect{x:0,y:0,w:WND_W/2,h:WND_H};
-            let mut dst_rect=src_rect;
+            let mut dst_rect=rect_type![0,0,WND_W/2,WND_H];
             let next=self.proc_draw_settings(BG_GPAGE,mode.clone(),&mut dst_rect);
             self.blt_rect_tbl[1]=dst_rect;
             if let Some(RENDER_MODE::Norm)=next{
@@ -172,7 +171,7 @@ impl GameApp{
         }
         if let Some(mode)=&self.show_right{
             let src_rect=SDL_Rect{x:0,y:0,w:WND_W/2,h:WND_H};
-            let mut dst_rect=SDL_Rect{x:WND_W/2,y:0,w:WND_W/2,h:WND_H};
+            let mut dst_rect=rect_type![WND_W/2,0,WND_W/2,WND_H];
             let next=self.proc_draw_settings(BG_GPAGE,mode.clone(),&mut dst_rect);
             self.blt_rect_tbl[2]=dst_rect;
             if let Some(RENDER_MODE::Norm)=next{
@@ -187,11 +186,19 @@ impl GameApp{
             self.app.set_gpage(TEXT_GPAGE,RENDER_GPAGE);
             self.app.set_draw_color(0x00,0x00,0x00,0xFF);
             if let Some(sel)=&self.selections{
-                self.app.fill_rect(&SDL_Rect{x:0,y:0,w:WND_W,h:WND_H});
+                self.app.fill_rect(&rect_type![0,0,WND_W,WND_H]);
                 self.app.set_draw_color(0xFF,0xFF,0xFF,0xFF);
                 for i in sel{
                     if 0<i.msg.len(){
-                        self.app.draw_msg(i.rect.x,i.rect.y,i.msg.as_str());
+# [cfg(feature="use_sdl3")]
+                        let tx=i.rect.x as i32;
+# [cfg(feature="use_sdl2")]
+                        let tx=i.rect.x;
+# [cfg(feature="use_sdl3")]
+                        let ty=i.rect.y as i32;
+# [cfg(feature="use_sdl2")]
+                        let ty=i.rect.y;
+                        self.app.draw_msg(tx,ty,i.msg.as_str());
                     }
                 }
             }else{
@@ -200,8 +207,15 @@ impl GameApp{
                 let text_idx=(self.text_log_pos+self.text_log.len()-1)%self.text_log.len();
                 let text=&self.text_log[text_idx];
                 if 0<text.len(){
-                    self.app.draw_msg(text_rect.x,text_rect.y,text.as_str());
-
+# [cfg(feature="use_sdl3")]
+                    let tx=text_rect.x as i32;
+# [cfg(feature="use_sdl2")]
+                    let tx=text_rect.x;
+# [cfg(feature="use_sdl3")]
+                    let ty=text_rect.y as i32;
+# [cfg(feature="use_sdl2")]
+                    let ty=text_rect.y;
+                    self.app.draw_msg(tx,ty,text.as_str());
                 }
 
             }
@@ -214,16 +228,14 @@ impl GameApp{
             let ud=self as *mut _ as  *mut c_void;
             let click_pos=self.app.click_pos();
             if !self.menu_bar.click(&click_pos,&self.app,ud){
-                let click_rect=SDL_Rect{
-                    x:click_pos.x,y:click_pos.y,w:1,h:1};
+                let click_rect=gen_rect_i32(click_pos.x,click_pos.y,1,1);
                 
                 if let Some(sel)=&self.selections{
                     let mut click_sel=false;
                     for i in 0..sel.len(){
                         if 0<sel[i].msg.len(){
                             unsafe{
-                                if SDL_bool_SDL_TRUE==
-                                    SDL_HasIntersection(&sel[i].rect,&click_rect){
+                                if rect_has_intersect(&sel[i].rect,&click_rect){
                                     if let Some(s)=&mut self.script{
                                         s.share_var_tbl.insert(
                                             String::from("result"),
@@ -256,8 +268,7 @@ impl GameApp{
         self.app.set_gpage(0,0);
         if let Some(mode)=&self.show_bg{
             unsafe{
-                if SDL_bool_SDL_TRUE==
-                    SDL_HasIntersection(&self.image_origin_rect_tbl[0],
+                if rect_has_intersect(&self.image_origin_rect_tbl[0],
                         &self.app.dirty_rect_tbl[BG_GPAGE]){
                     let repaint_rect=self.app.dirty_rect_tbl[BG_GPAGE];
                     self.app.copy(BG_GPAGE,
@@ -269,11 +280,10 @@ impl GameApp{
         }        
         if let Some(mode)=&self.show_left{
             unsafe{
-                if SDL_bool_SDL_TRUE==
-                    SDL_HasIntersection(&self.image_origin_rect_tbl[1],
+                if rect_has_intersect(&self.image_origin_rect_tbl[1],
                         &self.app.dirty_rect_tbl[BUSTUP_GPAGE]){
                     let mut repaint_rect=ZeroRect;
-                    SDL_IntersectRect(&self.image_origin_rect_tbl[1],
+                    rect_get_intersection(&self.image_origin_rect_tbl[1],
                         &self.app.dirty_rect_tbl[BUSTUP_GPAGE],
                         &mut repaint_rect);
                     self.app.copy(BUSTUP_GPAGE,&repaint_rect,&repaint_rect);
@@ -284,11 +294,10 @@ impl GameApp{
         }        
         if let Some(mode)=&self.show_right{
             unsafe{
-                if SDL_bool_SDL_TRUE==
-                    SDL_HasIntersection(&self.image_origin_rect_tbl[2],
+                if rect_has_intersect(&self.image_origin_rect_tbl[2],
                     &self.app.dirty_rect_tbl[BUSTUP_GPAGE]){
                     let mut repaint_rect=ZeroRect;
-                    SDL_IntersectRect(&self.image_origin_rect_tbl[2],
+                    rect_get_intersection(&self.image_origin_rect_tbl[2],
                         &self.app.dirty_rect_tbl[BUSTUP_GPAGE],
                         &mut repaint_rect);
                     self.app.copy(BUSTUP_GPAGE,&repaint_rect,&repaint_rect);
@@ -329,61 +338,7 @@ impl GameApp{
         self.menu_bar.render(&mut self.app);
 
     }
-    pub fn render(&mut self)->bool{
-        let mut enable_update=true;
-        self.app.set_gpage(0,0);
-        
-        if let Some(mode)=&self.show_bg{
-            let src_rect=SDL_Rect{x:0,y:0,w:WND_W,h:WND_H};
-            let mut dst_rect=src_rect;
-            let next=self.proc_draw_settings(BG_GPAGE,mode.clone(),&mut dst_rect);
-            if let None=self.show_bg{
-                enable_update=false;
-            }
-            self.app.copy(BG_GPAGE,&src_rect,&dst_rect);
-            self.show_bg=next;
-        }
-        if let Some(mode)=&self.show_left{
-            let src_rect=SDL_Rect{x:0,y:0,w:WND_W/2,h:WND_H};
-            let mut dst_rect=src_rect;
-            let next=self.proc_draw_settings(BG_GPAGE,mode.clone(),&mut dst_rect);
-            if let None=self.show_left{
-                enable_update=false;
-            }
-            self.app.copy(BUSTUP_GPAGE,&src_rect,&dst_rect);
-            self.show_left=next;
-        }
-        if let Some(mode)=&self.show_right{
-            let src_rect=SDL_Rect{x:0,y:0,w:WND_W/2,h:WND_H};
-            let mut dst_rect=SDL_Rect{x:WND_W/2,y:0,w:WND_W/2,h:WND_H};
-            let next=self.proc_draw_settings(BG_GPAGE,mode.clone(),&mut dst_rect);
-            if let None=self.show_right{
-                enable_update=false;
-            }
-            self.app.copy(BUSTUP_GPAGE,&src_rect,&dst_rect);
-            self.show_right=next;
-            
-        }
-        if self.text_changed{
-            let text_idx=(self.text_log_pos+self.text_log.len()-1)%self.text_log.len();
-            let text=&self.text_log[text_idx];
-                //println!("{}",text);
-            self.app.draw_msg(0,400,text.as_str());
-            self.text_changed=false;
-
-        }
-        if 0==self.menu_bar.rect.w{
-            self.menu_bar.set_rect(&self.app,&SDL_Rect{x:0,y:0,w:640,h:480});
-        }
-        self.app.set_draw_color(0xFF,0xFF,0xFF,0xFF);
-        if self.app.click(){
-            let ud=self as *mut _ as  *mut c_void;
-            self.menu_bar.click(&self.app.click_pos(),&self.app,ud);
-        }
-        self.menu_bar.render(&mut self.app);
-        return enable_update;
-    }
-    fn proc_draw_settings(&mut self,gpage:usize,mode:RENDER_MODE,dst_rect:&mut SDL_Rect)->Option<RENDER_MODE>{
+    fn proc_draw_settings(&mut self,gpage:usize,mode:RENDER_MODE,dst_rect:&mut RectType)->Option<RENDER_MODE>{
             
             match mode{
                 RENDER_MODE::Norm=>{
@@ -428,6 +383,11 @@ impl GameApp{
                 },
 
                 RENDER_MODE::MoveinFromLeft(cur_count)=>{
+# [cfg(feature="use_sdl3")]
+                    let value=dst_rect.w/(DEF_FRAME_RATE as f32)*
+                            (cur_count as f32);
+
+# [cfg(feature="use_sdl2")]
                     let value=dst_rect.w/(DEF_FRAME_RATE as i32)*
                             (cur_count as i32);
                     dst_rect.x=dst_rect.x-value;
@@ -438,6 +398,10 @@ impl GameApp{
                    }
                 },
                 RENDER_MODE::MoveinFromRight(cur_count)=>{
+# [cfg(feature="use_sdl3")]
+                    let value=dst_rect.w/(DEF_FRAME_RATE as f32)*
+                            (cur_count as f32);
+# [cfg(feature="use_sdl2")]
                     let value=dst_rect.w/(DEF_FRAME_RATE as i32)*
                             (cur_count as i32);
                     dst_rect.x=dst_rect.x+value;
@@ -448,6 +412,10 @@ impl GameApp{
                    }
                 },
                 RENDER_MODE::MoveoutToLeft(cur_count)=>{
+# [cfg(feature="use_sdl3")]
+                    let value=dst_rect.w/(DEF_FRAME_RATE as f32)*
+                            (cur_count as f32);
+# [cfg(feature="use_sdl2")]
                     let value=dst_rect.w/(DEF_FRAME_RATE as i32)*
                             (cur_count as i32);
                     dst_rect.x=dst_rect.x-value;
@@ -458,6 +426,10 @@ impl GameApp{
                    }
                 },
                 RENDER_MODE::MoveoutToRight(cur_count)=>{
+# [cfg(feature="use_sdl3")]
+                    let value=dst_rect.w/(DEF_FRAME_RATE as f32)*
+                            (cur_count as f32);
+# [cfg(feature="use_sdl2")]
                     let value=dst_rect.w/(DEF_FRAME_RATE as i32)*
                             (cur_count as i32);
                     dst_rect.x=dst_rect.x+value;
@@ -468,9 +440,13 @@ impl GameApp{
                    }
                 },
                 RENDER_MODE::Shutterin(cur_count)=>{
+# [cfg(feature="use_sdl3")]
+                    let value=dst_rect.h/(DEF_FRAME_RATE as f32)*
+                        (cur_count as f32);
+# [cfg(feature="use_sdl2")]
                     let value=dst_rect.h/(DEF_FRAME_RATE as i32)*
                         (cur_count as i32);
-                    dst_rect.h=value as i32;
+                    dst_rect.h=value;
                    if DEF_FRAME_RATE== cur_count{
                         return Some(RENDER_MODE::Norm);
                    }else{
@@ -478,6 +454,10 @@ impl GameApp{
                    }
                 },
                 RENDER_MODE::Shutterout(cur_count)=>{
+# [cfg(feature="use_sdl3")]
+                    let value=dst_rect.w/(DEF_FRAME_RATE as f32)*
+                        ((DEF_FRAME_RATE-cur_count) as f32);
+# [cfg(feature="use_sdl2")]
                     let value=dst_rect.w/(DEF_FRAME_RATE as i32)*
                         ((DEF_FRAME_RATE-cur_count) as i32);
                     dst_rect.h=value;

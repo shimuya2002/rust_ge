@@ -5,6 +5,9 @@ use crate::imports::*;
 
 #[derive(Debug)]
 pub struct RW_File{
+ # [cfg(feature="use_sdl3")]
+    sdl_io_stream:*mut SDL_IOStream,
+ # [cfg(feature="use_sdl2")]
     sdl_rw_ops:*mut SDL_RWops,
 }
 impl RW_File{
@@ -12,10 +15,16 @@ impl RW_File{
         unsafe{
             let path_cstr=CString::new(path).unwrap();
             let mode_cstr=CString::new("r".to_string()).unwrap();
+ # [cfg(feature="use_sdl3")]
+            let ops=SDL_IOFromFile(path_cstr.as_ptr(),mode_cstr.as_ptr());
+ # [cfg(feature="use_sdl2")]
             let ops=SDL_RWFromFile(path_cstr.as_ptr(),mode_cstr.as_ptr());
             if null_mut()!=ops{
                 return Ok(
                     Self{
+ # [cfg(feature="use_sdl3")]
+                        sdl_io_stream:ops,
+ # [cfg(feature="use_sdl2")]
                         sdl_rw_ops:ops
                     }
                 );
@@ -31,6 +40,11 @@ impl RW_File{
         unsafe{
             let mut buf=Vec::<T>::new();
             buf.resize_with(read_bytes_size/size_of::<T>(),||{T::default()});
+ # [cfg(feature="use_sdl3")]
+            let read_num=SDL_ReadIO(self.sdl_io_stream,
+                            buf.as_ptr() as *mut c_void,
+                            buf.len()*std::mem::size_of::<T>());
+ # [cfg(feature="use_sdl2")]
             let read_num=SDL_RWread(self.sdl_rw_ops,
                             buf.as_ptr() as *mut c_void,
                             std::mem::size_of::<T>(),
@@ -66,6 +80,9 @@ impl RW_File{
     }
     pub fn len(&self)->Result<usize,String>{
         unsafe{
+ # [cfg(feature="use_sdl3")]
+            let file_size=SDL_GetIOSize(self.sdl_io_stream);
+ # [cfg(feature="use_sdl2")]
             let file_size=SDL_RWsize(self.sdl_rw_ops);
             if -1!=file_size{
                 return Ok(file_size as usize);
@@ -81,9 +98,16 @@ impl RW_File{
 impl Drop for RW_File{
     fn drop(&mut self){
         unsafe{
-            if null_mut()!=self.sdl_rw_ops{
-                SDL_RWclose(self.sdl_rw_ops);
-                self.sdl_rw_ops=null_mut();
+ # [cfg(feature="use_sdl3")]
+            let obj=&mut self.sdl_io_stream;
+ # [cfg(feature="use_sdl2")]
+            let obj=&mut self.sdl_rw_ops;
+            if null_mut()!=*obj{
+ # [cfg(feature="use_sdl3")]
+                SDL_CloseIO(*obj);
+ # [cfg(feature="use_sdl2")]
+                SDL_RWclose(*obj);
+                *obj=null_mut();
             }
         }
     }
@@ -93,7 +117,7 @@ mod tests{
     use crate::rw_file::*;
     #[test]
     fn test_rwfile(){
-        let file=RW_File::open_read("./assets/test.txt");
+        let file=RW_File::open_read("./assets/load_test.txt");
         if let Ok(f)=file{
             if let Ok(s)=f.len(){
                 assert!(0<s);

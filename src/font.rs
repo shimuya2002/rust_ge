@@ -1,7 +1,7 @@
 use std::ffi::*;
 use std::ptr::*;
 use crate::imports::*;
-use crate::size::*;
+use crate::geometory::*;
 pub struct Font{
     sdl_font:*mut TTF_Font
 }

@@ -14,6 +14,7 @@ fn main(){
     }
     if cfg!(not(target_os="windows")){
         println!("cargo:rustc-link-search={}","/opt/local/lib");
+        println!("cargo:rustc-link-search={}","/usr/local/lib");
         println!("cargo:rustc-link-lib={}","c++");
 
     }

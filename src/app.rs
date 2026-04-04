@@ -1,3 +1,4 @@
+#[macro_use]
 use std::ffi::*;
 use std::ptr::*;
 use std::rc::*;
@@ -8,8 +9,11 @@ use crate::config::*;
 use crate::cache_tbl::*;
 use crate::texture::*;
 use crate::font::*;
-use crate::size::*;
+use crate::geometory::*;
 use crate::anim_set::*;
+include!("./geometory_inc.rs");
+
+
 pub type AppEventAction=fn(p_user_data:*mut c_void);
 
 pub struct App{
@@ -33,7 +37,7 @@ pub struct App{
     p_ud:*mut c_void,
     on_init:Option<AppEventAction>,
     on_term:Option<AppEventAction>,
-    pub dirty_rect_tbl:Vec<SDL_Rect>
+    pub dirty_rect_tbl:Vec<RectType>
 }
 
 impl App{
@@ -42,6 +46,7 @@ impl App{
         unsafe{
             let p_app=if cfg!(feature="non_bindings"){
                 SDL_Init(SDL_INIT_EVERYTHING);
+ # [cfg(feature="use_sdl2")]
                 IMG_Init((IMG_InitFlags_IMG_INIT_PNG | IMG_InitFlags_IMG_INIT_JPG) as i32 /*| IMG_INIT_WEBP*/);
                 TTF_Init();
                 null_mut()
@@ -87,28 +92,56 @@ impl App{
     pub fn set_ud(&mut self,p_ud:*mut c_void){
         self.p_ud=p_ud;
     }
+    fn poll_event(&mut self)->bool{
+        unsafe{
+ # [cfg(feature="use_sdl3")]
+            return SDL_PollEvent(&mut self.sdl_event);
+ # [cfg(feature="use_sdl2")]
+            return 1==SDL_PollEvent(&mut self.sdl_event);
+
+        }
+    }
     pub fn run_step(&mut self,w:i32,h:i32)->bool{
         unsafe{
             if cfg!(feature="non_bindings"){
                 if null_mut()==self.sdl_window{
+                    println!("Begin window create");
                     let caption_cstr=CString::new("").unwrap();
-                    self.sdl_window=SDL_CreateWindow(
+ #[cfg(feature="use_sdl3")]
+                    let window=SDL_CreateWindow(
+                        caption_cstr.as_ptr(),
+                        w,h,
+                        SDL_WindowFlags_SDL_WINDOW_OPENGL
+                    );
+ #[cfg(feature="use_sdl2")]
+                    let window=SDL_CreateWindow(
                         caption_cstr.as_ptr(),
                         SDL_WINDOWPOS_CENTERED_MASK as i32,
                         SDL_WINDOWPOS_CENTERED_MASK as i32,
                         w,h,
                         SDL_WindowFlags_SDL_WINDOW_OPENGL
                     );
+                    
+                    self.sdl_window=window;
                     if null_mut()==self.sdl_window{
+                        println!("Failed create window!");
                         return false;
                     }
-                    self.sdl_renderer=SDL_CreateRenderer(
-                        self.sdl_window,
-                        -1,
-                        SDL_RendererFlags_SDL_RENDERER_ACCELERATED |
-                        SDL_RendererFlags_SDL_RENDERER_TARGETTEXTURE
-                    );
+ #[cfg(feature="use_sdl3")]
+                    let mut renderer=SDL_CreateGPURenderer(null_mut(),self.sdl_window);
+                    if null_mut()==renderer{
+                        renderer=SDL_CreateRenderer(self.sdl_window,null_mut());
+                    }
+
+                    
+
+ #[cfg(feature="use_sdl2")]
+                    let renderer=SDL_CreateRenderer(self.sdl_window,-1,SDL_RendererFlags_SDL_RENDERER_ACCELERATED |SDL_RendererFlags_SDL_RENDERER_TARGETTEXTURE);
+                    
+                    self.sdl_renderer=renderer;
                     if null_mut()==self.sdl_renderer{
+                        let err_msg=CStr::from_ptr(SDL_GetError());
+                        println!("Failed to create renderer {}",err_msg.to_str().expect("").to_string());
                         SDL_DestroyWindow(self.sdl_window);
                         self.sdl_window=null_mut();
                         return false;
@@ -126,125 +159,9 @@ impl App{
                     self.mouse_button_state_buf[self.button_buf_idx]=false;
 
 
-                    while 1==SDL_PollEvent(&mut self.sdl_event){
+                    while self.poll_event(){
                         match self.sdl_event.type_{
-                            SDL_EventType_SDL_KEYDOWN=>{
-
-                                match self.sdl_event.key.keysym.sym{
-                                    SDL_KeysymType_SDLK_UP=>{
-                                        self.button_state_buf[self.button_buf_idx][BUTTON_UP]
-                                            =true;
-                                    },
-                                    SDL_KeysymType_SDLK_DOWN=>{
-                                        self.button_state_buf[self.button_buf_idx][BUTTON_DOWN]
-                                            =true;
-                                    },
-                                    SDL_KeysymType_SDLK_LEFT=>{
-                                        self.button_state_buf[self.button_buf_idx][BUTTON_LEFT]
-                                            =true;
-                                    },
-                                    SDL_KeysymType_SDLK_RIGHT=>{
-                                        self.button_state_buf[self.button_buf_idx][BUTTON_RIGHT]
-                                            =true;
-                                    },
-                                    SDL_KeysymType_SDLK_z=>{
-                                        self.button_state_buf[self.button_buf_idx][BUTTON_A]
-                                            =true;
-                                    },
-                                    SDL_KeysymType_SDLK_x=>{
-                                        self.button_state_buf[self.button_buf_idx][BUTTON_B]
-                                            =true;
-                                    },
-                                    SDL_KeysymType_SDLK_a=>{
-                                        self.button_state_buf[self.button_buf_idx][BUTTON_X]
-                                            =true;
-                                    },
-                                    SDL_KeysymType_SDLK_s=>{
-                                        self.button_state_buf[self.button_buf_idx][BUTTON_Y]
-                                            =true;
-                                    },
-                                    SDL_KeysymType_SDLK_q=>{
-                                        self.button_state_buf[self.button_buf_idx][BUTTON_L]
-                                            =true;
-                                    },
-                                    SDL_KeysymType_SDLK_w=>{
-                                        self.button_state_buf[self.button_buf_idx][BUTTON_R]
-                                            =true;
-                                    },
-                                    SDL_KeysymType_SDLK_1=>{
-                                        self.button_state_buf[self.button_buf_idx][BUTTON_ZL]
-                                            =true;
-                                    },
-                                    SDL_KeysymType_SDLK_2=>{
-                                        self.button_state_buf[self.button_buf_idx][BUTTON_ZR]
-                                            =true;
-                                    },
-                                 }
-
-                            },
-                            SDL_EventType_SDL_KEYUP=>{
-
-                                match self.sdl_event.key.keysym.sym{
-                                    SDL_KeysymType_SDLK_UP=>{
-                                        self.button_state_buf[self.button_buf_idx][BUTTON_UP]
-                                            =false;
-                                    },
-                                    SDL_KeysymType_SDLK_DOWN=>{
-                                        self.button_state_buf[self.button_buf_idx][BUTTON_DOWN]
-                                            =false;
-                                    },
-                                    SDL_KeysymType_SDLK_LEFT=>{
-                                        self.button_state_buf[self.button_buf_idx][BUTTON_LEFT]
-                                            =false;
-                                    },
-                                    SDL_KeysymType_SDLK_RIGHT=>{
-                                        self.button_state_buf[self.button_buf_idx][BUTTON_RIGHT]
-                                            =false;
-                                    },
-                                    SDL_KeysymType_SDLK_z=>{
-                                        self.button_state_buf[self.button_buf_idx][BUTTON_A]
-                                            =false;
-                                    },
-                                    SDL_KeysymType_SDLK_x=>{
-                                        self.button_state_buf[self.button_buf_idx][BUTTON_B]
-                                            =false;
-                                    },
-                                    SDL_KeysymType_SDLK_a=>{
-                                        self.button_state_buf[self.button_buf_idx][BUTTON_X]
-                                            =false;
-                                    },
-                                    SDL_KeysymType_SDLK_s=>{
-                                        self.button_state_buf[self.button_buf_idx][BUTTON_Y]
-                                            =false;
-                                    },
-                                    SDL_KeysymType_SDLK_q=>{
-                                        self.button_state_buf[self.button_buf_idx][BUTTON_L]
-                                            =false;
-                                    },
-                                    SDL_KeysymType_SDLK_w=>{
-                                        self.button_state_buf[self.button_buf_idx][BUTTON_R]
-                                            =false;
-                                    },
-                                    SDL_KeysymType_SDLK_1=>{
-                                        self.button_state_buf[self.button_buf_idx][BUTTON_ZL]
-                                            =false;
-                                    },
-                                    SDL_KeysymType_SDLK_2=>{
-                                        self.button_state_buf[self.button_buf_idx][BUTTON_ZR]
-                                            =false;
-                                    },
-                                 }
-
-                            },
-                            SDL_EventType_SDL_MOUSEBUTTONDOWN=>{
-                                if 0!=((SDL_BUTTON_LEFT as u8) & self.sdl_event.button.button){
-                                    self.mouse_button_state_buf[self.button_buf_idx]=true;
-                                    self.click_pos.x=self.sdl_event.button.x;
-                                    self.click_pos.y=self.sdl_event.button.y;
-                                }
-
-                            },
-                            SDL_EventType_SDL_QUIT=>{
+                            SDL_QUIT_EVENT_VALUE=>{
                                 if let Some(f)=self.on_term{
                                     f(self.p_ud);
                                 }
@@ -254,6 +171,31 @@ impl App{
                                 self.sdl_renderer=null_mut();
                                 self.sdl_window=null_mut();
                                 return false;
+                            },
+                            SDL_KEYDOWN_EVENT_VALUE=>{
+
+ # [cfg(feature="use_sdl3")]
+                                let key_code=self.sdl_event.key.key;
+ # [cfg(feature="use_sdl2")]
+                                let key_code=self.sdl_event.key.keysym.sym;
+                                self.proc_keydown(key_code);
+
+                            },
+                            SDL_KEYUP_EVENT_VALUE=>{
+ # [cfg(feature="use_sdl3")]
+                                let key_code=self.sdl_event.key.key;
+ # [cfg(feature="use_sdl2")]
+                                let key_code=self.sdl_event.key.keysym.sym;
+                                self.proc_keyup(key_code);
+                            },
+                            SDL_MOUSE_BUTTON_DOWN_EVENT_VALUE=>{
+                                //保存しているマウスの状態を更新する
+                                if 0!=((SDL_BUTTON_LEFT as u8) & self.sdl_event.button.button){
+                                    self.mouse_button_state_buf[self.button_buf_idx]=true;
+                                    self.click_pos.x=self.sdl_event.button.x as i32;
+                                    self.click_pos.y=self.sdl_event.button.y as i32;
+                                }
+
                             },
                             _=>{}
                         }
@@ -281,18 +223,26 @@ impl App{
  # [cfg(feature="non_bindings")]
                 let renderer=self.sdl_renderer;
  # [cfg(not(feature="non_bindings"))]
-                let renderer=get_sdl_renderer(self.p_app),
- # [cfg(feature="use_sdl3")]
+                let renderer=get_sdl_renderer(self.p_app);
+
+# [cfg(feature="use_sdl3")]
+                let pix_format:u32=SDL_PixelFormat_SDL_PIXELFORMAT_ARGB8888 as u32;
+ # [cfg(feature="use_sdl2")]
+                let pix_format:u32=SDL_PixelFormatEnum_SDL_PIXELFORMAT_ARGB8888 as u32;
+
+# [cfg(feature="use_sdl3")]
                 let tex_access:u32=SDL_TextureAccess_SDL_TEXTUREACCESS_TARGET;
  # [cfg(feature="use_sdl2")]
-                let tex_access:i32=SDL_TextureAccess_SDL_TEXTUREACCESS_TARGET;
+                let tex_access:i32=SDL_TextureAccess_SDL_TEXTUREACCESS_TARGET as i32;
+
+
                 let tex=SDL_CreateTexture(renderer,
-                            SDL_PixelFormatEnum_SDL_PIXELFORMAT_ARGB8888 as u32,//SDL_PIXELFORMAT_UNKNOWN,
+                            pix_format,//SDL_PIXELFORMAT_UNKNOWN,
                             tex_access,
                             w,
                             h);
                 self.g_pages.push(tex);
-                self.dirty_rect_tbl.push(SDL_Rect{x:0,y:0,w:0,h:0});
+                self.dirty_rect_tbl.push(rect_type!{0,0,0,0});
             }
 
         }
@@ -327,14 +277,107 @@ impl App{
         self.g_pages.clear();
         self.dirty_rect_tbl.clear();
     }
+    /// キー押下解除処理を行う
+    ///* 'key_code' 押下されたキーコード
+    fn proc_keyup(&mut self,key_code:u32){
+        match key_code{
+            SDL_K_UP_VALUE=>{
+                self.button_state_buf[self.button_buf_idx][BUTTON_UP]=false;
+            },
+            SDL_K_DOWN_VALUE=>{
+                self.button_state_buf[self.button_buf_idx][BUTTON_DOWN]=false;
+            },
+            SDL_K_LEFT_VALUE=>{
+                self.button_state_buf[self.button_buf_idx][BUTTON_LEFT]=false;
+            },
+            SDL_K_RIGHT_VALUE=>{
+                self.button_state_buf[self.button_buf_idx][BUTTON_RIGHT]=false;
+            },
+            SDL_K_z_VALUE=>{
+                self.button_state_buf[self.button_buf_idx][BUTTON_A]=false;
+            },
+            SDL_K_x_VALUE=>{
+                self.button_state_buf[self.button_buf_idx][BUTTON_B]=false;
+            },
+            SDL_K_a_VALUE=>{
+                self.button_state_buf[self.button_buf_idx][BUTTON_X]=false;
+            },
+            SDL_K_s_VALUE=>{
+                self.button_state_buf[self.button_buf_idx][BUTTON_Y]=false;
+            },
+            SDL_K_q_VALUE=>{
+                self.button_state_buf[self.button_buf_idx][BUTTON_L]=false;
+            },
+            SDL_K_w_VALUE=>{
+                self.button_state_buf[self.button_buf_idx][BUTTON_R]=false;
+            },
+            SDL_K_1_VALUE=>{
+                self.button_state_buf[self.button_buf_idx][BUTTON_ZL]=false;
+            },
+            SDL_K_2_VALUE=>{
+                self.button_state_buf[self.button_buf_idx][BUTTON_ZR]=false;
+            },
+            _=>{},
+        }
 
+
+    }
+    /// キー押下処理を行う
+    ///* 'key_code' 押下されたキーコード
+    fn proc_keydown(&mut self,key_code:u32){
+        match key_code{
+            SDL_K_UP_VALUE=>{
+                self.button_state_buf[self.button_buf_idx][BUTTON_UP]=true;
+            },
+            SDL_K_DOWN_VALUE=>{
+                self.button_state_buf[self.button_buf_idx][BUTTON_DOWN]=true;
+            },
+            SDL_K_LEFT_VALUE=>{
+                self.button_state_buf[self.button_buf_idx][BUTTON_LEFT]=true;
+            },
+            SDL_K_RIGHT_VALUE=>{
+                self.button_state_buf[self.button_buf_idx][BUTTON_RIGHT]=true;
+            },
+            SDL_K_z_VALUE=>{
+                self.button_state_buf[self.button_buf_idx][BUTTON_A]=true;
+            },
+            SDL_K_x_VALUE=>{
+                self.button_state_buf[self.button_buf_idx][BUTTON_B]=true;
+            },
+            SDL_K_a_VALUE=>{
+                self.button_state_buf[self.button_buf_idx][BUTTON_X]=true;
+            },
+            SDL_K_s_VALUE=>{
+                self.button_state_buf[self.button_buf_idx][BUTTON_Y]=true;
+            },
+            SDL_K_q_VALUE=>{
+                self.button_state_buf[self.button_buf_idx][BUTTON_L]=true;
+            },
+            SDL_K_w_VALUE=>{
+                self.button_state_buf[self.button_buf_idx][BUTTON_R]=true;
+            },
+            SDL_K_1_VALUE=>{
+                self.button_state_buf[self.button_buf_idx][BUTTON_ZL]=true;
+            },
+            SDL_K_2_VALUE=>{
+                self.button_state_buf[self.button_buf_idx][BUTTON_ZR]=true;
+            },
+            _=>{},
+        }
+
+    }
     pub fn quit(&self){
         unsafe{
             SDL_PushEvent(
                 &mut SDL_Event{
                     quit:SDL_QuitEvent{
+ # [cfg(feature="use_sdl3")]
+                        type_:SDL_EventType_SDL_EVENT_QUIT,
+ # [cfg(feature="use_sdl2")]
                         type_:SDL_EventType_SDL_QUIT,
+
                         timestamp:SDL_GetTicks(),
+ # [cfg(feature="use_sdl3")]
                         reserved:0
                     }
 
@@ -348,6 +391,7 @@ impl Drop for App{
  # [cfg(feature="non_bindings")]
                 TTF_Quit();
  # [cfg(feature="non_bindings")]
+ # [cfg(feature="use_sdl2")]
                 IMG_Quit();
  # [cfg(feature="non_bindings")]
                 SDL_Quit();
@@ -369,4 +413,7 @@ impl Drop for App{
 
     
 }
+
 include!("./app_draw.rs");
+include!("./app_draw_sdl3.rs");
+include!("./app_draw_sdl2.rs");

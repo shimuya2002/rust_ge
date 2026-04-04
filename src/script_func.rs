@@ -3,8 +3,10 @@ use crate::imports::*;
 use crate::sb_state::*;
 use crate::game_app::*;
 use crate::config::*;
-use crate::size::*;
+use crate::geometory::*;
 use crate::anim_set::*;
+include!("./geometory_inc.rs");
+
 pub fn load(p_user_data:*mut c_void,state:&mut SB_State)->usize{
     unsafe{
         let mut app=p_user_data as *mut GameApp;
@@ -144,13 +146,23 @@ pub fn selection(p_user_data:*mut c_void,state:&mut SB_State)->usize{
         let msg2=state.value_to_string(2);
         let msg1=state.value_to_string(3);
         let mut size=(*app).app.measure_msg_utf8(msg4.as_str());
-        let rect4=SDL_Rect{x:MSG_TEXT_SIZE,y:WND_H-size.h,w:size.w,h:size.h};
+# [cfg(feature="use_sdl3")]
+        let sw=size.w as f32;
+# [cfg(feature="use_sdl2")]
+        let sw=size.w;
+# [cfg(feature="use_sdl3")]
+        let sh=size.h as f32;
+# [cfg(feature="use_sdl2")]
+        let sh=size.h;
+
+
+        let rect4=rect_type!{MSG_TEXT_SIZE,WND_H-size.h,size.w,size.h};
         size=(*app).app.measure_msg_utf8(msg3.as_str());
-        let rect3=SDL_Rect{x:MSG_TEXT_SIZE,y:rect4.y-size.h,w:size.w,h:size.h};
+        let rect3=rect_type!{MSG_TEXT_SIZE,rect4.y-sh,size.w,size.h};
         size=(*app).app.measure_msg_utf8(msg2.as_str());
-        let rect2=SDL_Rect{x:MSG_TEXT_SIZE,y:rect3.y-size.h,w:size.w,h:size.h};
+        let rect2=rect_type!{MSG_TEXT_SIZE,rect3.y-sh,size.w,size.h};
         size=(*app).app.measure_msg_utf8(msg1.as_str());
-        let rect1=SDL_Rect{x:MSG_TEXT_SIZE,y:rect2.y-size.h,w:size.w,h:size.h};
+        let rect1=rect_type!{MSG_TEXT_SIZE,rect2.y-sh,size.w,size.h};
         (*app).selections=Some(
             [
                 SelectionInfo{

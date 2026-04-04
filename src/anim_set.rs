@@ -1,6 +1,6 @@
 use std::rc::*;
 use crate::imports::*;
-use crate::size::*;
+use crate::geometory::*;
 use crate::texture::*;
 
 pub struct AnimFrame{

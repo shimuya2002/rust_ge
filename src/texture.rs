@@ -25,6 +25,9 @@ impl Texture{
             }
             let sw=(*p_surf).w;
             let sh=(*p_surf).h;
+ # [cfg(feature="use_sdl3")]
+            SDL_DestroySurface(p_surf);
+ # [cfg(feature="use_sdl2")]
             SDL_FreeSurface(p_surf);
             return Ok(Self{
                 tex:pTex,

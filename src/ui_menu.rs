@@ -2,47 +2,55 @@ use std::ffi::*;
 use std::cmp::*;
 use crate::imports::*;
 use crate::app::*;
-use crate::size::*;
+use crate::geometory::*;
 use crate::config::*;
-use crate::point::*;
 use crate::ui_item::*;
 use crate::ui_popup::*;
+include!("./geometory_inc.rs");
+
+///* 画面内に表示されるメニュー項目
 pub enum MenuType{
+    ///テキスト
+    ///* 'String' 表示される文字列
+    ///* 'Option<EventAction>' クリックされた時に実行されるイベントハンドラー
     Text(String,Option<EventAction>),
+    ///サブメニュー
+    ///* 'String' 表示する文字列
+    ///* 'Option<PopupMenu>' 選択された時に表示するサブメニュー
     Submenu(String,Option<PopupMenu>)
 }
 pub struct MenuItem{
     pub menu_type:MenuType,
-    pub rect:SDL_Rect,
+    pub rect:RectType,
 }
 impl MenuItem{
     pub fn new(menu_type:MenuType)->Self{
         return Self{
             menu_type:menu_type,
-            rect:SDL_Rect{x:0,y:0,w:0,h:0}
+            rect:gen_rect_i32(0,0,0,0)
         };
     }
-    pub fn set_rect(&mut self,app:&App,preffered_rect:&SDL_Rect)->SDL_Rect{
+    pub fn set_rect(&mut self,app:&App,preffered_rect:&RectType)->RectType{
         match &mut self.menu_type{
 
             MenuType::Text(s,_)=>{
                 let t_size=app.measure_ui_utf8(s.as_str());
-                self.rect=SDL_Rect{
-                    x:preffered_rect.x,
-                    y:preffered_rect.y,
-                    w:t_size.w,
-                    h:t_size.h
-                };
+                self.rect=rect_type![
+                    preffered_rect.x,
+                    preffered_rect.y,
+                    t_size.w,
+                    t_size.h
+                ];
 
             },
             MenuType::Submenu(s,_)=>{
                 let t_size=app.measure_ui_utf8(s.as_str());
-                self.rect=SDL_Rect{
-                    x:preffered_rect.x,
-                    y:preffered_rect.y,
-                    w:t_size.w,
-                    h:t_size.h
-                };
+                self.rect=rect_type![
+                    preffered_rect.x,
+                    preffered_rect.y,
+                    t_size.w,
+                    t_size.h
+                ];
 
             }
         }
@@ -51,10 +59,28 @@ impl MenuItem{
     pub fn render(&self,app:&mut App){
         match &self.menu_type{
             MenuType::Text(s,_)=>{
-                app.draw_ui_text(self.rect.x,self.rect.y,s.as_str());
+# [cfg(feature="use_sdl3")]
+                let tx=self.rect.x as i32;
+# [cfg(feature="use_sdl2")]
+                let tx=self.rect.x;
+# [cfg(feature="use_sdl3")]
+                let ty=self.rect.y as i32;
+# [cfg(feature="use_sdl2")]
+                let ty=self.rect.y;
+                app.draw_ui_text(tx,ty,s.as_str());
             }
             MenuType::Submenu(s,popup)=>{
-                app.draw_ui_text(self.rect.x,self.rect.y,s.as_str());
+# [cfg(feature="use_sdl3")]
+                let tx=self.rect.x as i32;
+# [cfg(feature="use_sdl2")]
+                let tx=self.rect.x;
+# [cfg(feature="use_sdl3")]
+                let ty=self.rect.y as i32;
+# [cfg(feature="use_sdl2")]
+                let ty=self.rect.y;
+
+
+                app.draw_ui_text(tx,ty,s.as_str());
                 if let Some(pp)=popup{
                     if pp.is_open{
                         pp.render(app);

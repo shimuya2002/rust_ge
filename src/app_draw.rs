@@ -1,3 +1,4 @@
+#[macro_use]
 impl App{
     pub fn set_gpage(&mut self,r_page:usize,s_page:usize){
         self.render_page=r_page;
@@ -21,12 +22,12 @@ impl App{
         if let None=image{
 
             unsafe{
-                if let Ok(t)=Texture::load(
  # [cfg(feature="non_bindings")]
-                                self.sdl_renderer,
+            let renderer=self.sdl_renderer;
  # [cfg(not(feature="non_bindings"))]
-                                get_sdl_renderer(self.p_app),
-                                path){
+            let renderer=get_sdl_renderer(self.p_app);
+
+                if let Ok(t)=Texture::load(renderer,path){
                     self.image_cache.insert(&file_path,Rc::new(t));
                     image=self.image_cache.get(&file_path);
                 }
@@ -38,24 +39,26 @@ impl App{
             let dst_w=min(WND_W-x,im_ref.w);
             let dst_h=min(WND_H-y,im_ref.h);
             unsafe{
+ # [cfg(feature="use_sdl3")]
                 let copy_rect=SDL_Rect{
                     x:x,
                     y:y,
                     w:if 0<dst_w{dst_w}else{0},
                     h:if 0<dst_h{dst_h}else{0}
                 };
-                SDL_RenderCopy(
- # [cfg(feature="non_bindings")]
-                    self.sdl_renderer,
- # [cfg(not(feature="non_bindings"))]
-                    get_sdl_renderer(self.p_app),
-                    im_ref.tex,
-                    null_mut(),
-                    &copy_rect
+                let copy_rect=rect_type!(
+                    x,
+                    y,
+                    if 0<dst_w{dst_w}else{0},
+                    if 0<dst_h{dst_h}else{0}
                 );
-                let mut tmp=SDL_Rect{x:0,y:0,w:0,h:0};
+ # [cfg(feature="use_sdl3")]
+                self.copy_tex_sdl3(im_ref,None,&copy_rect);
+ # [cfg(feature="use_sdl2")]
+                self.copy_tex_sdl2(im_ref,None,&copy_rect);
+                let mut tmp=ZeroRect;
 
-                SDL_UnionRect(&self.dirty_rect_tbl[self.render_page],
+                rect_get_union(&self.dirty_rect_tbl[self.render_page],
                     &copy_rect,
                     &mut tmp);
                 self.dirty_rect_tbl[self.render_page]=tmp;
@@ -66,29 +69,28 @@ impl App{
     }
     pub fn update_screen(&mut self,w:i32,h:i32){
         unsafe{
-            SDL_SetRenderTarget(
  # [cfg(feature="non_bindings")]
-                self.sdl_renderer,
+            let renderer=self.sdl_renderer;
  # [cfg(not(feature="non_bindings"))]
-                get_sdl_renderer(self.p_app),
+            let renderer=get_sdl_renderer(self.p_app);
 
-                null_mut());
-            SDL_SetRenderDrawColor(
- # [cfg(feature="non_bindings")]
-                self.sdl_renderer,
- # [cfg(not(feature="non_bindings"))]
-                get_sdl_renderer(self.p_app),
-                0,0,0,0xFF);
-            SDL_RenderClear(self.sdl_renderer);
-            SDL_RenderCopy(
- # [cfg(feature="non_bindings")]
-                self.sdl_renderer,
- # [cfg(not(feature="non_bindings"))]
-                get_sdl_renderer(self.p_app),
-                        
+            SDL_SetRenderTarget(renderer,null_mut());
+            SDL_SetRenderDrawColor(renderer,0,0,0,0xFF);
+            SDL_RenderClear(renderer);
+ # [cfg(feature="use_sdl3")]
+            SDL_RenderTexture(renderer,
                 self.g_pages[self.display_page],
                 null_mut(),
                 null_mut());
+ # [cfg(feature="use_sdl2")]
+            SDL_RenderCopy(renderer,
+                self.g_pages[self.display_page],
+                null_mut(),
+                null_mut());
+
+ # [cfg(feature="use_sdl3")]
+            SDL_FlushRenderer(self.sdl_renderer);
+ # [cfg(feature="use_sdl2")]
             SDL_RenderFlush(self.sdl_renderer);
             SDL_RenderPresent(self.sdl_renderer);
 
@@ -109,18 +111,19 @@ impl App{
             SDL_Delay(ms);
         }
     }
-    pub fn copy(&mut self,idx:usize,src_rect:&SDL_Rect,dst_rect:&SDL_Rect){
+    pub fn copy(&mut self,idx:usize,src_rect:&RectType,dst_rect:&RectType){
         unsafe{
-            SDL_RenderCopy(
- # [cfg(feature="non_bindings")]
-                self.sdl_renderer,
- # [cfg(not(feature="non_bindings"))]
-                get_sdl_renderer(self.p_app),
-                
-                self.g_pages[idx],src_rect,dst_rect);
-            let mut tmp=SDL_Rect{x:0,y:0,w:0,h:0};
 
-            SDL_UnionRect(&self.dirty_rect_tbl[idx],
+# [cfg(feature="use_sdl3")]
+            self.copy_sdl3(idx,src_rect,dst_rect);
+# [cfg(feature="use_sdl2")]
+            self.copy_sdl2(idx,src_rect,dst_rect);
+
+
+
+            let mut tmp=ZeroRect;
+
+            rect_get_union(&self.dirty_rect_tbl[idx],
                 dst_rect,
                 &mut tmp);
             self.dirty_rect_tbl[idx]=tmp;
@@ -159,39 +162,30 @@ impl App{
 
         }
     }
-    pub fn draw_rect(&mut self,rect:&SDL_Rect){
+    pub fn draw_rect(&mut self,rect:&RectType){
         unsafe{
-            SDL_RenderDrawRect(
- # [cfg(feature="non_bindings")]
-                self.sdl_renderer,
- # [cfg(not(feature="non_bindings"))]
-                get_sdl_renderer(self.p_app),
-                
-                rect);
-            let mut tmp=SDL_Rect{x:0,y:0,w:0,h:0};
-            SDL_UnionRect(&self.dirty_rect_tbl[self.render_page],
+ # [cfg(feature="use_sdl3")]
+            self.draw_rect_sdl3(rect);            
+ # [cfg(feature="use_sdl2")]
+            self.draw_rect_sdl2(rect);
+
+            let mut tmp=gen_rect_i32(0,0,0,0);
+            rect_get_union(&self.dirty_rect_tbl[self.render_page],
                 rect,
                 &mut tmp);
             self.dirty_rect_tbl[self.render_page]=tmp;
 
         }
     }
-    pub fn fill_rect(&mut self,rect:&SDL_Rect){
+    pub fn fill_rect(&mut self,rect:&RectType){
         unsafe{
- # [cfg(feature="non_bindings")]
-            let renderer=self.sdl_renderer;
- # [cfg(not(feature="non_bindings"))]
-            let renderer=get_sdl_renderer(self.p_app),
-
  # [cfg(feature="use_sdl3")]
-            let dst_rect=&SDL_FRect{x:rect.x as f32,
-                y:rect.y as f32,w:rect.w as f32,h:rect.h as f32};
+            self.fill_rect_sdl3(rect);
  # [cfg(feature="use_sdl2")]
-            let dst_rect=&rect;
-            SDL_RenderFillRect(renderer,dst_rect);
-            let mut tmp=SDL_Rect{x:0,y:0,w:0,h:0};
+            self.fill_rect_sdl2(rect);
+            let mut tmp=gen_rect_i32(0,0,0,0);
 
-            SDL_UnionRect(&self.dirty_rect_tbl[self.render_page],
+            rect_get_union(&self.dirty_rect_tbl[self.render_page],
                 rect,
                 &mut tmp);
             self.dirty_rect_tbl[self.render_page]=tmp;
@@ -207,16 +201,16 @@ impl App{
  # [cfg(feature="non_bindings")]
             let renderer=self.sdl_renderer;
  # [cfg(not(feature="non_bindings"))]
-            let renderer=get_sdl_renderer(self.p_app),
+            let renderer=get_sdl_renderer(self.p_app);
             SDL_GetRenderDrawColor(renderer,&mut r,&mut g,&mut b,&mut a);
 
  # [cfg(feature="use_sdl3")]
             circleRGBA(renderer,x as f32,y as f32,rad as f32,r,g,b,a);
  # [cfg(feature="use_sdl2")]
             circleRGBA(renderer,x as i16,y as i16,rad as i16,r,g,b,a);
-            let mut tmp=SDL_Rect{x:0,y:0,w:0,h:0};
-            SDL_UnionRect(&self.dirty_rect_tbl[self.render_page],
-                &SDL_Rect{x:x-rad,y:y-rad,w:rad*2,h:rad*2},
+            let mut tmp=rect_type!{0,0,0,0};
+            rect_get_union(&self.dirty_rect_tbl[self.render_page],
+                &rect_type!{x-rad,y-rad,rad*2,rad*2},
                 &mut tmp);
             self.dirty_rect_tbl[self.render_page]=tmp;
 
@@ -231,7 +225,7 @@ impl App{
  # [cfg(feature="non_bindings")]
             let renderer=self.sdl_renderer;
  # [cfg(not(feature="non_bindings"))]
-            let renderer=get_sdl_renderer(self.p_app),
+            let renderer=get_sdl_renderer(self.p_app);
             SDL_GetRenderDrawColor(renderer,&mut r,&mut g,&mut b,&mut a);
 
  # [cfg(feature="use_sdl3")]
@@ -239,9 +233,9 @@ impl App{
  # [cfg(feature="use_sdl2")]
             filledCircleRGBA(renderer,x as i16,y as i16,rad as i16,r,g,b,a);
 
-                let mut tmp=SDL_Rect{x:0,y:0,w:0,h:0};
-            SDL_UnionRect(&self.dirty_rect_tbl[self.render_page],
-                &SDL_Rect{x:x-rad,y:y-rad,w:rad*2,h:rad*2},
+                let mut tmp=rect_type!{0,0,0,0};
+            rect_get_union(&self.dirty_rect_tbl[self.render_page],
+                &rect_type!{x-rad,y-rad,rad*2,rad*2},
                 &mut tmp);
             self.dirty_rect_tbl[self.render_page]=tmp;
 
@@ -266,19 +260,25 @@ impl App{
                 };
             if let Some(font)=use_font{
                 let surf=font.render_utf8(txt,(WND_W-x) as u32);
-                let src_rect=SDL_Rect{x:0,y:0,w:(*surf).w,h:(*surf).h};
-                let dst_rect=SDL_Rect{x:x,y:y,w:(*surf).w,h:(*surf).h};
+                let src_rect=rect_type!{0,0,(*surf).w,(*surf).h};
+                let dst_rect=rect_type!{x,y,(*surf).w,(*surf).h};
  # [cfg(feature="non_bindings")]
-            let renderer=self.sdl_renderer;
+                let renderer=self.sdl_renderer;
  # [cfg(not(feature="non_bindings"))]
-            let renderer=get_sdl_renderer(self.p_app),
+                let renderer=get_sdl_renderer(self.p_app);
                 let t_r=Texture::from_surface(renderer,surf);
+ # [cfg(feature="use_sdl3")]
+                SDL_DestroySurface(surf);                
+ # [cfg(feature="use_sdl2")]
                 SDL_FreeSurface(surf);                
 
                 if let Ok(tex)=t_r{
-                        SDL_RenderCopy(renderer,tex.tex,&src_rect,&dst_rect);
-                        let mut tmp=SDL_Rect{x:0,y:0,w:0,h:0};
-                        SDL_UnionRect(&self.dirty_rect_tbl[self.render_page],
+ # [cfg(feature="use_sdl3")]
+                        self.copy_tex_sdl3(&tex,Some(&src_rect),&dst_rect);
+ # [cfg(feature="use_sdl2")]
+                        self.copy_tex_sdl2(&tex,Some(&src_rect),&dst_rect);
+                        let mut tmp=rect_type!{0,0,0,0};
+                        rect_get_union(&self.dirty_rect_tbl[self.render_page],
                             &dst_rect,
                             &mut tmp);
                         self.dirty_rect_tbl[self.render_page]=tmp;
@@ -290,7 +290,7 @@ impl App{
     ///* 各GPAGEの更新領域の情報をクリアする
     pub fn clear_dirty_rects(&mut self){
         for i in &mut self.dirty_rect_tbl{
-            *i=SDL_Rect{x:0,y:0,w:0,h:0};
+            *i=rect_type![0,0,0,0];
         }
     }    
 }

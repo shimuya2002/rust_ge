@@ -3,6 +3,8 @@ name = "rust_ge"
 version = "0.1.0"
 edition = "2024"
 
+[dependencies]
+num_enum="*"
 [build-dependencies]
 bindgen = "*"
 
