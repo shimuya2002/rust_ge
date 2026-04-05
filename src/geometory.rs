@@ -1,12 +1,11 @@
-#[macro_use]
-use num_enum::*;
+
 use crate::imports::*;
 # [cfg(feature="use_sdl3")]
 pub type RectType=SDL_FRect;
 # [cfg(feature="use_sdl2")]
 pub type RectType=SDL_Rect;
 
-#[macro_export]
+
 pub fn gen_rect_i32(x:i32,y:i32,w:i32,h:i32)->RectType{
 # [cfg(feature="use_sdl3")]
     return SDL_FRect{

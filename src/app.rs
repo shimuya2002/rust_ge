@@ -160,7 +160,12 @@ impl App{
 
 
                     while self.poll_event(){
-                        match self.sdl_event.type_{
+ # [cfg(target_os="windows")]                        
+                        let event_type=self.sdl_event.type_ as i32;
+ # [cfg(not(target_os="windows"))]                        
+                        let event_type=self.sdl_event.type_;
+
+                        match event_type{
                             SDL_QUIT_EVENT_VALUE=>{
                                 if let Some(f)=self.on_term{
                                     f(self.p_ud);
@@ -226,12 +231,17 @@ impl App{
                 let renderer=get_sdl_renderer(self.p_app);
 
 # [cfg(feature="use_sdl3")]
-                let pix_format:u32=SDL_PixelFormat_SDL_PIXELFORMAT_ARGB8888 as u32;
- # [cfg(feature="use_sdl2")]
-                let pix_format:u32=SDL_PixelFormatEnum_SDL_PIXELFORMAT_ARGB8888 as u32;
+                let pix_format:SDL_PixelFormat=SDL_PixelFormat_SDL_PIXELFORMAT_ARGB8888;
+
+
+                
+# [cfg(feature="use_sdl2")]
+                let pix_format:i32=SDL_PixelFormatEnum_SDL_PIXELFORMAT_ARGB8888 as u32;
+
+
 
 # [cfg(feature="use_sdl3")]
-                let tex_access:u32=SDL_TextureAccess_SDL_TEXTUREACCESS_TARGET;
+                let tex_access:SDL_TextureAccess=SDL_TextureAccess_SDL_TEXTUREACCESS_TARGET;
  # [cfg(feature="use_sdl2")]
                 let tex_access:i32=SDL_TextureAccess_SDL_TEXTUREACCESS_TARGET as i32;
 
