@@ -20,6 +20,7 @@ mod ui_menubar;
 mod ui_popup;
 mod anim_set;
 mod game_app_event;
+mod rouge_dungeon;
 use std::ffi::*;
 use std::ptr::*;
 use std::env::*;
@@ -34,7 +35,7 @@ use crate::sb_state::*;
 extern "C" fn on_paint(p:*mut c_void){
     unsafe{
         let mut app_obj=p as *mut App;
-        (*app_obj).update_screen(WND_W,WND_H);
+        (*app_obj).update_screen();
     }
 }
 extern "C" fn on_init(p:*mut c_void){

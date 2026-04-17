@@ -1,6 +1,8 @@
 use std::fmt;
 use std::ffi::*;
 use crate::sb_state::*;
+///BASICコマンドに関する定義を記載したモジュール
+
 #[derive(Clone)]
 pub enum VarType{
     None,

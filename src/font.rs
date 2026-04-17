@@ -2,6 +2,8 @@ use std::ffi::*;
 use std::ptr::*;
 use crate::imports::*;
 use crate::geometory::*;
+
+///フォントオブジェクト
 pub struct Font{
     sdl_font:*mut TTF_Font
 }

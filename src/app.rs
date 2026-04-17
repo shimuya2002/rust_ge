@@ -13,34 +13,55 @@ use crate::geometory::*;
 use crate::anim_set::*;
 include!("./geometory_inc.rs");
 
-
+/// アプリケーション内で発生したイベントを処理するハンドラー
+///* 'p_user_data' Appオブジェクトに設定したユーザデータ
 pub type AppEventAction=fn(p_user_data:*mut c_void);
-
+/// アプリケーションオブジェクト
 pub struct App{
 # [cfg(not(feature="non_bindings"))]
     pub p_app:*mut c_void,
+    ///グラフィックページ
     g_pages:Vec<*mut SDL_Texture>,
+    ///管理するアニメーションセット
     anim_sets:Vec<AnimSet>,
+    ///描画先のグラフィックページ
     render_page:usize,
+    ///画面に表示されるグラフィックページ
     display_page:usize,
+    ///画像キャッシュ
     image_cache:CacheTbl<Texture>,
+    ///SDL2/SDL3用のレンダラー
     sdl_renderer:*mut SDL_Renderer,
+    ///SDL2/SDL3用ウィンドウ
     sdl_window:*mut SDL_Window,
+    ///SDL2/SDL3用イベント
     sdl_event:SDL_Event,
+    ///SDL2/SDL3用FPS同期オブジェクト
     sdl_fps_manager:FPSmanager,
+    ///ボタン押下状態バッファー参照用のインデックス
     button_buf_idx:usize,
+    ///ボタン押下状態保存用のバッファー
     button_state_buf:[[bool;BUTTON_NUM];2],
+    ///マウスボタン押下状態保存用のバッファー
     mouse_button_state_buf:[bool;2],
+    ///マウスポインタの位置
     click_pos:SDL_Point,
+    ///画面テキスト用のフォント
     msg_font:Option<Font>,
+    ///UI用のフォント
     ui_font:Option<Font>,
+    ///イベントハンドラに渡すユーザデータ
     p_ud:*mut c_void,
+    ///アプリケーション初期化時に呼ばれるハンドラー
     on_init:Option<AppEventAction>,
+    ///アプリケーション終了時に呼ばれるハンドラー
     on_term:Option<AppEventAction>,
+    ///各グラフィックの更新領域
     pub dirty_rect_tbl:Vec<RectType>
 }
 
 impl App{
+    ///コンストラクタ
     pub fn new()->Self{
 
         unsafe{
@@ -83,15 +104,23 @@ impl App{
 
         }
     }
+    ///初期化イベントハンドラの設定
+    ///* 'f' 設定するイベントハンドラ
     pub fn set_init_event(&mut self,f:AppEventAction){
         self.on_init=Some(f);
     }
+    ///終了イベントハンドラを設定する
+    ///* 'f' 設定するイベントハンドラ
     pub fn set_term_event(&mut self,f:AppEventAction){
         self.on_term=Some(f);
     }
+    ///ユーザデータを設定する
+    ///* 'p_ud' 設定するユーザデータ
     pub fn set_ud(&mut self,p_ud:*mut c_void){
         self.p_ud=p_ud;
     }
+    ///イベント読み出しを行う
+    /// 処理すべきイベントが残っているならtrue、それ以外ならfalseを返す
     fn poll_event(&mut self)->bool{
         unsafe{
  # [cfg(feature="use_sdl3")]
@@ -101,9 +130,13 @@ impl App{
 
         }
     }
+    ///現在のイベントキュー内のイベント処理を行う
+    ///* 'w' 表示するウィンドウの横幅
+    ///* 'h' 表示するウィンドウの縦幅
     pub fn run_step(&mut self,w:i32,h:i32)->bool{
         unsafe{
             if cfg!(feature="non_bindings"){
+                //ウィンドウが生成されていならウィンドウとレンダラーを生成する
                 if null_mut()==self.sdl_window{
                     println!("Begin window create");
                     let caption_cstr=CString::new("").unwrap();
@@ -155,7 +188,7 @@ impl App{
                     return true;
                 }else{
                     SDL_framerateDelay(&mut self.sdl_fps_manager);
-                    self.update_screen(w,h);
+                    self.update_screen();
                     self.mouse_button_state_buf[self.button_buf_idx]=false;
 
 
@@ -272,6 +305,7 @@ impl App{
             self.anim_sets.push(AnimSet::default());
         }
     }
+    ///ライブラリ固有のリソースを破棄する
     pub fn deinit_resources(&mut self){
         self.ui_font=None;
         self.msg_font=None;
@@ -376,6 +410,7 @@ impl App{
         }
 
     }
+    ///アプリケーションを終了させる
     pub fn quit(&self){
         unsafe{
             SDL_PushEvent(
@@ -396,6 +431,7 @@ impl App{
     }
 }
 impl Drop for App{
+    ///ドロップ処理
     fn drop(&mut self){
         unsafe{
  # [cfg(feature="non_bindings")]
@@ -427,3 +463,4 @@ impl Drop for App{
 include!("./app_draw.rs");
 include!("./app_draw_sdl3.rs");
 include!("./app_draw_sdl2.rs");
+include!("./app_input.rs");

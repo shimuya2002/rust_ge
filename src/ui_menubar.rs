@@ -7,6 +7,7 @@ use crate::geometory::*;
 use crate::ui_item::*;
 use crate::ui_menu::*;
 use crate::ui_popup::*;
+include!("./geometory_inc.rs");
 ///Menubar UI
 pub struct Menubar{
     sub_menus:Vec<MenuItem>,//画面上部に表示される内容
@@ -18,7 +19,7 @@ impl Menubar{
     pub fn new(items:Vec<MenuItem>)->Self{
         return Self{
             sub_menus:items,
-            rect:gen_rect_i32(0,0,0,0)
+            rect:rect_type!{0,0,0,0}
         };
     }
     pub fn set_rect(&mut self,app:&App,preffered_rect:&RectType){
@@ -94,6 +95,7 @@ impl Menubar{
                         if ppm.is_open{
                             if PointInRect(po,&i.rect){
                                 ppm.close();
+                                
                                 return true;
                             }else{
                                 return ppm.click(po,app,ud);

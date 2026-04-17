@@ -1,4 +1,8 @@
+///BASICのその他の細々とした解析を行う関数を記載
 impl SyntaxParser{
+    ///GOTO文を解析する
+    ///'lex' 解析する字句列
+    ///'cmd' 解析後のコマンドを収める配列
     fn parse_goto(&mut self,lex:&mut LexerParser,cmd:&mut Vec<CmdType>)
         ->Result<(),String>{
         let tok=lex.get();
@@ -37,7 +41,9 @@ impl SyntaxParser{
             return Err(Self::gen_invalid_eos(file!(),line!()));
         }
     }
-
+    ///BASICスクリプトを解析する
+    ///'src' 解析する文字列
+    ///'cmd' 解析後のコマンドを収める配列
     pub fn parse(&mut self,src:&String,cmd:&mut Vec<CmdType>)
         ->Result<(),String>{
         let mut lex=LexerParser::new(src.clone());
@@ -50,6 +56,9 @@ impl SyntaxParser{
 
         }
     }
+    ///BASICスクリプトを解析する
+    ///'lex' 解析する字句列
+    ///'cmd' 解析後のコマンドを収める配列
     fn parse_chunck(&mut self,lex:&mut LexerParser,cmd:&mut Vec<CmdType>)
         ->Result<(),String>{
         while let Some(tok)=lex.peek(){
@@ -134,6 +143,9 @@ impl SyntaxParser{
         }
         return Ok(());
     }
+    ///関数呼び出しを解析する
+    ///'lex' 解析する字句列
+    ///'cmd' 解析後のコマンドを収める配列
     fn parse_call(&mut self,name:&String,lex:&mut LexerParser,cmd:&mut Vec<CmdType>)
         ->Result<(),String>{
         if let Some(mut ti)=self.find(name){
@@ -185,6 +197,8 @@ impl SyntaxParser{
             return Err(Self::gen_not_defined(&name));
         }
     }
+    ///ラベル参照を解決する
+    ///'cmd' 解決するコマンドを収めた配列
     fn resolve_label_ref(&mut self,cmd:&mut Vec<CmdType>)
         ->Result<(),String>{
         for k in self.label_ref_tbl.keys(){

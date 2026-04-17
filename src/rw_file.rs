@@ -2,7 +2,7 @@ use std::ffi::*;
 use std::ptr::*;
 use std::mem::*;
 use crate::imports::*;
-
+///ファイルIO
 #[derive(Debug)]
 pub struct RW_File{
  # [cfg(feature="use_sdl3")]
@@ -11,6 +11,8 @@ pub struct RW_File{
     sdl_rw_ops:*mut SDL_RWops,
 }
 impl RW_File{
+    ///コンストラクタ
+    ///'path' 開くファイルへのパス
     pub fn open_read(path:&str)->Result<Self,String>{
         unsafe{
             let path_cstr=CString::new(path).unwrap();
@@ -36,6 +38,9 @@ impl RW_File{
             }
         }
     }
+    ///ファイル読み込み
+    ///'read_bytes_size'　読み込むデータサイズ
+    ///成功したら読み込んだデータを返す
     pub fn read<T:Default>(&self,read_bytes_size:usize)->Result<Vec<T>,String>{
         unsafe{
             let mut buf=Vec::<T>::new();
@@ -60,6 +65,8 @@ impl RW_File{
         }
 
     }
+    ///ファイル全体をUTF8テキストで読み込み
+    ///成功したら読み込んだUTF8テキストを返す
     pub fn read_utf8_text(&self)->Result<String,String>{
         let len_res=self.len();
         if let Ok(size)=len_res{
@@ -78,6 +85,7 @@ impl RW_File{
             return Err(len_res.unwrap_err());
         }
     }
+    ///ファイルサイズを返す
     pub fn len(&self)->Result<usize,String>{
         unsafe{
  # [cfg(feature="use_sdl3")]
@@ -96,6 +104,7 @@ impl RW_File{
     }
 }
 impl Drop for RW_File{
+    ///デストラクタ
     fn drop(&mut self){
         unsafe{
  # [cfg(feature="use_sdl3")]

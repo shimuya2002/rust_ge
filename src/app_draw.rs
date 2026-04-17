@@ -1,5 +1,9 @@
+///アプリケーションの描画関連を集めたモジュール
 #[macro_use]
 impl App{
+    ///描画先、画面に表示するグラフィックページを指定する
+    /// 'r_page' 描画先となるグラフィックページ
+    /// 's_page' 画面に表示するグラフィックページ
     pub fn set_gpage(&mut self,r_page:usize,s_page:usize){
         self.render_page=r_page;
         self.display_page=s_page;
@@ -16,6 +20,10 @@ impl App{
     pub fn set_anim_set(&mut self,idx:usize,anim_set:AnimSet){
         self.anim_sets[idx]=anim_set;
     }
+    ///画像をロード
+    /// 'x' ロード先のX座標
+    /// 'y' ロード先のY座標
+    /// 'path' ロードする画像ファイルへのパス
     pub fn load_image(&mut self,x:i32,y:i32,path:&str){
         let file_path=path.to_string();
         let mut image=self.image_cache.get(&file_path);
@@ -39,13 +47,7 @@ impl App{
             let dst_w=min(WND_W-x,im_ref.w);
             let dst_h=min(WND_H-y,im_ref.h);
             unsafe{
- # [cfg(feature="use_sdl3")]
-                let copy_rect=SDL_Rect{
-                    x:x,
-                    y:y,
-                    w:if 0<dst_w{dst_w}else{0},
-                    h:if 0<dst_h{dst_h}else{0}
-                };
+
                 let copy_rect=rect_type!(
                     x,
                     y,
@@ -67,7 +69,21 @@ impl App{
         }
         
     }
-    pub fn update_screen(&mut self,w:i32,h:i32){
+    ///グラフィックページの消去を行う
+    pub fn clear(&mut self){
+        unsafe{
+ # [cfg(feature="non_bindings")]
+            let renderer=self.sdl_renderer;
+ # [cfg(not(feature="non_bindings"))]
+            let renderer=get_sdl_renderer(self.p_app);
+
+            SDL_SetRenderDrawColor(renderer,0,0,0,0xFF);
+            SDL_RenderClear(renderer);
+            self.dirty_rect_tbl[self.render_page]=ZeroRect;
+        }
+    }
+    ///画面の更新を行う
+    pub fn update_screen(&mut self){
         unsafe{
  # [cfg(feature="non_bindings")]
             let renderer=self.sdl_renderer;
@@ -89,28 +105,18 @@ impl App{
                 null_mut());
 
  # [cfg(feature="use_sdl3")]
-            SDL_FlushRenderer(self.sdl_renderer);
+            SDL_FlushRenderer(renderer);
  # [cfg(feature="use_sdl2")]
-            SDL_RenderFlush(self.sdl_renderer);
-            SDL_RenderPresent(self.sdl_renderer);
+            SDL_RenderFlush(renderer);
+            SDL_RenderPresent(renderer);
 
         }
 
     }
-    pub fn button(&self,idx:usize)->bool{
-        return self.button_state_buf[(self.button_buf_idx+1) & 1][idx];
-    }
-    pub fn click(&self)->bool{
-        return self.mouse_button_state_buf[(self.button_buf_idx+1) & 1];
-    }
-    pub fn click_pos(&self)->&SDL_Point{
-        return &self.click_pos;
-    }
-    pub fn wait(&self,ms:u32){
-        unsafe{
-            SDL_Delay(ms);
-        }
-    }
+    ///グラフィックページの描画
+    /// 'idx' 描画するグラフィックページ
+    /// 'src_rect' 描画するグラフィックページ内の座標
+    /// 'dst_rect' 描画先の座標
     pub fn copy(&mut self,idx:usize,src_rect:&RectType,dst_rect:&RectType){
         unsafe{
 
@@ -130,6 +136,8 @@ impl App{
 
         }
     }
+    ///テキストの描画に必要な領域を求める
+    /// 'txt' 領域を求めたい文字列
     pub fn measure_msg_utf8(&self,txt:&str)->Size{
         if let Some(font)=&self.msg_font{
             return font.measure_utf8_size(txt);
@@ -137,6 +145,8 @@ impl App{
         }
         return Size{w:0,h:0};
     }
+    ///UI用のテキスト描画に必要な領域を求める
+    /// 'txt' 領域を求めたい文字列
     pub fn measure_ui_utf8(&self,txt:&str)->Size{
         if let Some(font)=&self.ui_font{
             return font.measure_utf8_size(txt);
@@ -145,23 +155,31 @@ impl App{
         return Size{w:0,h:0};
 
     }
+    ///乗算カラーを設定
+    /// 'page' 対象となるグラフィックページ
     pub fn set_mod_color(&self,page:usize,r:u8,g:u8,b:u8){
         unsafe{
             SDL_SetTextureColorMod(self.g_pages[page],r,g,b);
 
         }
     }
+    ///　アルファ値の設定
+    /// 'page' 対象となるグラフィックページ
     pub fn set_mod_alpha(&self,page:usize,alpha:u8){
         unsafe{
             SDL_SetTextureAlphaMod(self.g_pages[page],alpha);
         }
     }
+    /// 描画色を設定
     pub fn set_draw_color(&self,r:u8,g:u8,b:u8,a:u8){
         unsafe{
             SDL_SetRenderDrawColor(self.sdl_renderer,r,g,b,a);
 
         }
     }
+        
+    ///矩型描画
+    ///'rect' 描画を行う座標
     pub fn draw_rect(&mut self,rect:&RectType){
         unsafe{
  # [cfg(feature="use_sdl3")]
@@ -169,7 +187,7 @@ impl App{
  # [cfg(feature="use_sdl2")]
             self.draw_rect_sdl2(rect);
 
-            let mut tmp=gen_rect_i32(0,0,0,0);
+            let mut tmp=rect_type!{0,0,0,0};
             rect_get_union(&self.dirty_rect_tbl[self.render_page],
                 rect,
                 &mut tmp);
@@ -177,13 +195,16 @@ impl App{
 
         }
     }
+
+    ///矩型塗りつぶし
+    ///'rect' 塗りつぶしを行う座標    
     pub fn fill_rect(&mut self,rect:&RectType){
         unsafe{
  # [cfg(feature="use_sdl3")]
             self.fill_rect_sdl3(rect);
  # [cfg(feature="use_sdl2")]
             self.fill_rect_sdl2(rect);
-            let mut tmp=gen_rect_i32(0,0,0,0);
+            let mut tmp=rect_type!{0,0,0,0};
 
             rect_get_union(&self.dirty_rect_tbl[self.render_page],
                 rect,
@@ -192,6 +213,10 @@ impl App{
 
         }
     }
+    ///円弧を描画
+    /// 'x' 中心のX座標
+    /// 'y' 中心のY座標
+    /// 'rad' 半径
     pub fn draw_circle(&mut self,x:i32,y:i32,rad:i32){
         unsafe{
             let mut r:u8=0;
@@ -216,6 +241,10 @@ impl App{
 
         }
     }
+    ///円形の塗りつぶし
+    /// 'x' 中心のX座標
+    /// 'y' 中心のY座標
+    /// 'rad' 半径
     pub fn fill_circle(&mut self,x:i32,y:i32,rad:i32){
         unsafe{
             let mut r:u8=0;
@@ -241,13 +270,26 @@ impl App{
 
         }
     }
+    ///テキスト描画
+    /// 'x' 描画を開始するX座標
+    /// 'y' 描画を開始するY座標
+    /// 'txt' 描画する文字列
     pub fn draw_msg(&mut self,x:i32,y:i32,txt:&str){
         self.draw_text(USE_MSG_FONT,x,y,txt);
     }
+    ///UIテキスト描画
+    /// 'x' 描画を開始するX座標
+    /// 'y' 描画を開始するY座標
+    /// 'txt' 描画する文字列
     pub fn draw_ui_text(&mut self,x:i32,y:i32,txt:&str){
         self.draw_text(USE_UI_FONT,x,y,txt);
         
     }
+    ///テキスト描画
+    /// 'font_type' 描画に使用するフォント
+    /// 'x' 描画を開始するX座標
+    /// 'y' 描画を開始するY座標
+    /// 'txt' 描画する文字列
     fn draw_text(&mut self,font_type:i32,x:i32,y:i32,txt:&str){
         if 0 ==txt.len(){
             return;
@@ -287,7 +329,7 @@ impl App{
             }
         }
     }
-    ///* 各GPAGEの更新領域の情報をクリアする
+    /// 各GPAGEの更新領域の情報をクリアする
     pub fn clear_dirty_rects(&mut self){
         for i in &mut self.dirty_rect_tbl{
             *i=rect_type![0,0,0,0];

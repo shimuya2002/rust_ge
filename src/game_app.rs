@@ -12,6 +12,7 @@ use crate::game_app_event::*;
 use crate::sb_state::*;
 use crate::sb_cmdtype::*;
 use crate::geometory::*;
+use crate::rouge_dungeon::*;
 include!("./geometory_inc.rs");
 
 const BgImageRect:RectType=rect_type![0,0,WND_W,WND_H];
@@ -96,7 +97,8 @@ pub struct GameApp{
     ///* 'script' 実行中のスクリプト
     script:Option<SB_State>,
     ///* 'selections' 画面に表示されている選択肢
-    pub selections:Option<[SelectionInfo;4]>
+    pub selections:Option<[SelectionInfo;4]>,
+    rouge:RougeDungon,
 }
 impl GameApp{
 
@@ -123,6 +125,11 @@ impl GameApp{
                         Some(
                             PopupMenu::new(vec![MenuItem::new(MenuType::Text("Quit".to_string(),Some(quit_app)))])
                         ))),
+                    MenuItem::new(MenuType::Submenu("Dungeon".to_string(),
+                        Some(
+                            PopupMenu::new(vec![MenuItem::new(MenuType::Text("Reset".to_string(),Some(reset_floor)))])
+                        ))),
+
                 ]
             ),
             image_origin_rect_tbl:[
@@ -133,12 +140,24 @@ impl GameApp{
             ],
             blt_rect_tbl:[ZeroRect;4],
             script:None,
-            selections:None  
+            selections:None,
+            rouge:RougeDungon::new()  
         };
     }
     ///* 初期化イベント処理
     pub fn on_init(&mut self){
         self.menu_bar.set_rect(&self.app,&rect_type![0,0,640,480]);
+        self.rouge.set_render_rect(&rect_type!{
+            0,
+            self.menu_bar.rect.y+self.menu_bar.rect.h,
+            WND_W,
+            WND_H-(self.menu_bar.rect.h as i32)
+        });
+        self.reset_floor();
+    }
+    ///ダンジョンの状態を再生成する
+    pub fn reset_floor(&mut self){
+        self.rouge.reset();
 
     }
     ///* ゲーム更新イベント処理
@@ -228,7 +247,7 @@ impl GameApp{
             let ud=self as *mut _ as  *mut c_void;
             let click_pos=self.app.click_pos();
             if !self.menu_bar.click(&click_pos,&self.app,ud){
-                let click_rect=gen_rect_i32(click_pos.x,click_pos.y,1,1);
+                let click_rect=rect_type!{click_pos.x,click_pos.y,1,1};
                 
                 if let Some(sel)=&self.selections{
                     let mut click_sel=false;
@@ -266,6 +285,9 @@ impl GameApp{
     }
     pub fn paint(&mut self){
         self.app.set_gpage(0,0);
+        self.app.clear();
+        self.rouge.render(&mut self.app);
+        /*
         if let Some(mode)=&self.show_bg{
             unsafe{
                 if rect_has_intersect(&self.image_origin_rect_tbl[0],
@@ -317,7 +339,7 @@ impl GameApp{
                         &repaint_rect);
 
                 }
-        }
+        }*/
 /*
         if let Some(sel)=&self.selections{
             for i in sel{

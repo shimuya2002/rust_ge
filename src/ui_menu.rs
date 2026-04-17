@@ -27,7 +27,7 @@ impl MenuItem{
     pub fn new(menu_type:MenuType)->Self{
         return Self{
             menu_type:menu_type,
-            rect:gen_rect_i32(0,0,0,0)
+            rect:rect_type!{0,0,0,0}
         };
     }
     pub fn set_rect(&mut self,app:&App,preffered_rect:&RectType)->RectType{

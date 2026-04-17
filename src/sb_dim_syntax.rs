@@ -1,4 +1,9 @@
+///BASICの変数定義を解析する処理を記載
+
 impl SyntaxParser{
+    ///DIM文を解析する
+    ///'lex' 解析する字句列
+    ///'cmd' 解析後のコマンドを収める配列
     fn parse_dim(&mut self,lex:&mut LexerParser,cmd:&mut Vec<CmdType>)
         ->Result<(),String>{
         let tok=lex.get();

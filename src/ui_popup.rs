@@ -6,6 +6,7 @@ use crate::geometory::*;
 use crate::config::*;
 use crate::ui_item::*;
 use crate::ui_menu::*;
+include!("./geometory_inc.rs");
 
 pub struct PopupMenu{
     sub_menus:Vec<MenuItem>,
@@ -17,18 +18,18 @@ impl PopupMenu{
     pub fn new(items:Vec<MenuItem>)->Self{
         return Self{
             sub_menus:items,
-            rect:gen_rect_i32(0,0,0,0),
+            rect:rect_type!{0,0,0,0},
             is_open:false
         };
     }
     pub fn open(&mut self,app:&App,rect:&RectType){
         self.is_open=true;
-        let mut preffered_rect=gen_rect_i32(
+        let mut preffered_rect=rect_type!{
             (rect.x as i32)+UI_BORDER_SIZE,
             (rect.y as i32)+UI_BORDER_SIZE,
             (rect.w as i32)-UI_BORDER_SIZE*2,
             (rect.y as i32)-UI_BORDER_SIZE*2
-        );
+        };
 
         let mut max_h=0;
         let mut max_w=0;
@@ -66,6 +67,7 @@ impl PopupMenu{
                         if let Some(func)=f{
                             func(ud);
                         }
+                        self.close();
                         return true;
                     }
                 },

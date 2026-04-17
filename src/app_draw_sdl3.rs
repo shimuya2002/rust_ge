@@ -1,4 +1,8 @@
 impl App{
+    /// テクスチャ描画
+    /// 'tex' 描画元のテクスチャ
+    /// 'src_rect' 描画するtex内の座標
+    ///            Noneの場合はテクスチャ全体を描画
  # [cfg(feature="use_sdl3")]
     pub fn copy_tex_sdl3(&mut self,tex:&Texture,src_rect:Option<&RectType>,dst_rect:&RectType){
         unsafe{
@@ -14,7 +18,11 @@ impl App{
         }
     
     }
- # [cfg(feature="use_sdl3")]
+    ///グラフィックページの描画
+    /// 'idx' 描画するグラフィックページ
+    /// 'src_rect' 描画するグラフィックページ内の座標
+    /// 'dst_rect' 描画先の座標
+# [cfg(feature="use_sdl3")]
     pub fn copy_sdl3(&mut self,idx:usize,src_rect:&RectType,dst_rect:&RectType){
         unsafe{
  # [cfg(feature="non_bindings")]
@@ -25,6 +33,8 @@ impl App{
             SDL_RenderTexture(renderer,self.g_pages[idx],src_rect,dst_rect);
         }
     }
+    ///矩型塗りつぶし
+    ///'rect' 塗りつぶしを行う座標
  # [cfg(feature="use_sdl3")]
     pub fn fill_rect_sdl3(&mut self,rect:&RectType){
         unsafe{
@@ -36,6 +46,8 @@ impl App{
             SDL_RenderFillRect(renderer,rect);
         }
     }
+    ///矩型描画
+    ///'rect' 描画を行う座標
  # [cfg(feature="use_sdl3")]
     pub fn draw_rect_sdl3(&mut self,rect:&RectType){
         unsafe{
