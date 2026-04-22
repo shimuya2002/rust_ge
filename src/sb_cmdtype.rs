@@ -13,7 +13,7 @@ pub enum VarType{
     Pos(usize)
 
 }
-pub type NativeFuncType=fn(p_user_data:*mut c_void,state:&mut SB_State)->usize;
+pub type NativeFuncType=fn(p_user_data:*mut c_void,state:&mut SB_State)->Option<VarType>;
 #[derive(Debug,PartialEq)]
 pub enum CmdType{
     Nop,

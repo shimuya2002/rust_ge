@@ -38,8 +38,8 @@ impl SB_State{
                 parser.regist(String::from("show"),TypeInfo::NativeFunc(Some(show)));
                 parser.regist(String::from("text"),TypeInfo::NativeFunc(Some(text)));
                 parser.regist(String::from("wait"),TypeInfo::NativeFunc(Some(wait)));
-                parser.regist(String::from("create_anim_set"),
-                    TypeInfo::NativeFunc(Some(create_anim_set)));
+                parser.regist(String::from("create_sprite"),
+                    TypeInfo::NativeFunc(Some(create_sprite)));
                 parser.regist(String::from("selection"),
                     TypeInfo::NativeFunc(Some(selection)));
                 parser.regist(String::from("left"),
@@ -341,9 +341,12 @@ impl SB_State{
                 },
                 CmdType::Call(f,argn)=>{
                     let arg_num=*argn;
-                    let ret_num=(*f)(self.p_user_data,self);
+                    let ret=(*f)(self.p_user_data,self);
                     for i in 0..arg_num{
-                        self.stack.remove(self.stack.len()-ret_num-1);
+                        self.stack.pop();
+                    }
+                    if let Some(v)=ret{
+                        self.stack.push(v);
                     }
                 },
             }

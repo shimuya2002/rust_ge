@@ -285,8 +285,10 @@ impl GameApp{
     }
     pub fn paint(&mut self){
         self.app.set_gpage(0,0);
-        self.app.clear();
-        self.rouge.render(&mut self.app);
+        ///self.app.clear();
+        //self.rouge.render(&mut self.app);
+        let sprite=self.app.sprites[0].clone();
+        self.app.copy(6,&sprite.rect,&rect_type!{0,128,64,64});
         /*
         if let Some(mode)=&self.show_bg{
             unsafe{

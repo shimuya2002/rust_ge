@@ -17,9 +17,7 @@ impl App{
         }
 
     }
-    pub fn set_anim_set(&mut self,idx:usize,anim_set:AnimSet){
-        self.anim_sets[idx]=anim_set;
-    }
+
     ///画像をロード
     /// 'x' ロード先のX座標
     /// 'y' ロード先のY座標
@@ -35,14 +33,19 @@ impl App{
  # [cfg(not(feature="non_bindings"))]
             let renderer=get_sdl_renderer(self.p_app);
 
-                if let Ok(t)=Texture::load(renderer,path){
+                println!("load");
+                let result=Texture::load(renderer,path);
+                if let Ok(t)=result{
                     self.image_cache.insert(&file_path,Rc::new(t));
                     image=self.image_cache.get(&file_path);
+                }else if let Err(msg)=result{
+                    println!("{}",msg);
                 }
 
             }
         }
         if let Some(mut t)=image{
+            println!("A");
             let im_ref:&Texture=Rc::borrow(&t);
             let dst_w=min(WND_W-x,im_ref.w);
             let dst_h=min(WND_H-y,im_ref.h);

@@ -21,6 +21,7 @@ mod ui_popup;
 mod anim_set;
 mod game_app_event;
 mod rouge_dungeon;
+mod sprite;
 use std::ffi::*;
 use std::ptr::*;
 use std::env::*;

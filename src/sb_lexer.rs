@@ -217,9 +217,13 @@ impl LexerParser{
         if cur_c.is_alphabetic(){
             let b_idx=self.parse_pos;
             self.parse_pos=self.parse_pos+1;
-            while self.parse_pos<self.src.len() && 
-                self.src.chars().nth(self.parse_pos).unwrap().is_alphanumeric(){
+            while self.parse_pos<self.src.len() {
+                let tmp=self.src.chars().nth(self.parse_pos).unwrap();
+                if !(tmp.is_alphanumeric() || '_'==tmp){
+                    break;
+                }
                 self.parse_pos=self.parse_pos+1;
+                
             }
             let e_idx=self.parse_pos;
             let ident_str=self.src[b_idx..e_idx].to_string().to_lowercase();

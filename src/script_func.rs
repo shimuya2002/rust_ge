@@ -1,13 +1,15 @@
 use std::ffi::*;
 use crate::imports::*;
 use crate::sb_state::*;
+use crate::sb_cmdtype::*;
 use crate::game_app::*;
 use crate::config::*;
 use crate::geometory::*;
-use crate::anim_set::*;
+use crate::sprite::*;
+use crate::sprite::*;
 include!("./geometory_inc.rs");
 
-pub fn load(p_user_data:*mut c_void,state:&mut SB_State)->usize{
+pub fn load(p_user_data:*mut c_void,state:&mut SB_State)->Option<VarType>{
     unsafe{
         let mut app=p_user_data as *mut GameApp;
         let path=state.value_to_string(0);
@@ -36,10 +38,11 @@ pub fn load(p_user_data:*mut c_void,state:&mut SB_State)->usize{
             (*app).show_player_battle=None;
 
         }
-        return 0;
+        (*app).app.set_gpage(0,0);
+        return None;
     }
 }
-pub fn show(p_user_data:*mut c_void,state:&mut SB_State)->usize{
+pub fn show(p_user_data:*mut c_void,state:&mut SB_State)->Option<VarType>{
     unsafe{
         let mut app=p_user_data as *mut GameApp;
         let pos=state.value_to_int(0);
@@ -56,11 +59,11 @@ pub fn show(p_user_data:*mut c_void,state:&mut SB_State)->usize{
 
         }
         state.run_script=false;
-        return 0;
+        return None;
         
     }
 }
-pub fn movein(p_user_data:*mut c_void,state:&mut SB_State)->usize{
+pub fn movein(p_user_data:*mut c_void,state:&mut SB_State)->Option<VarType>{
     unsafe{
         let mut app=p_user_data as *mut GameApp;
         let pos=state.value_to_int(0);
@@ -71,14 +74,14 @@ pub fn movein(p_user_data:*mut c_void,state:&mut SB_State)->usize{
 
         }else if BG_IMAGE==pos{
             (*app).show_bg=Some(RENDER_MODE::MoveinFromLeft(0));
-            return 0;
+
         }
         state.run_script=false;
-        return 0;
+        return None;
         
     }
 }
-pub fn moveout(p_user_data:*mut c_void,state:&mut SB_State)->usize{
+pub fn moveout(p_user_data:*mut c_void,state:&mut SB_State)->Option<VarType>{
     unsafe{
         let mut app=p_user_data as *mut GameApp;
         let pos=state.value_to_int(0);
@@ -92,11 +95,11 @@ pub fn moveout(p_user_data:*mut c_void,state:&mut SB_State)->usize{
 
         }
         state.run_script=false;
-        return 0;
+        return None;
         
     }
 }
-pub fn text(p_user_data:*mut c_void,state:&mut SB_State)->usize{
+pub fn text(p_user_data:*mut c_void,state:&mut SB_State)->Option<VarType>{
     unsafe{
         let mut app=p_user_data as *mut GameApp;
         let txt=state.value_to_string(0);
@@ -104,41 +107,36 @@ pub fn text(p_user_data:*mut c_void,state:&mut SB_State)->usize{
         (*app).text_log_pos=((*app).text_log_pos+1)%(*app).text_log.len();
         (*app).text_changed=true;
         state.run_script=false;
-        return 0;
+        return None;
     }
 }
-pub fn wait(p_user_data:*mut c_void,state:&mut SB_State)->usize{
+pub fn wait(p_user_data:*mut c_void,state:&mut SB_State)->Option<VarType>{
     unsafe{
         let mut app=p_user_data as *mut GameApp;
         let ms=state.value_to_int(0);
         (*app).app.wait(ms as u32);
-        return 0;
+        return None;
     }
 }
-pub fn create_anim_set(p_user_data:*mut c_void,state:&mut SB_State)->usize{
+pub fn create_sprite(p_user_data:*mut c_void,state:&mut SB_State)->Option<VarType>{
     unsafe{
         let mut app=p_user_data as *mut GameApp;
         let y_offset=state.value_to_int(0);
         let x_offset=state.value_to_int(1);
         let y_origin=state.value_to_int(2);
         let x_origin=state.value_to_int(3);
-        let frame_num=state.value_to_int(4);
-        let g_page=state.value_to_int(5);
-        let name=state.value_to_string(6);
-        let anim_idx=state.value_to_int(7);
-        let anim_set=AnimSet::new(
-            name,
-            g_page as usize,
-            &SDL_Rect{x:x_offset,y:y_offset,w:x_offset,h:y_offset},
-            &Size{w:x_offset,h:y_offset},
-            frame_num
-        );
-        (*app).app.set_anim_set(anim_idx as usize,anim_set);
-        return 0;
+        let g_page=state.value_to_int(4);
+        println!("{},{},{},{},{}",g_page,x_origin,y_origin,x_offset,y_offset);
+        let sprite=Sprite{
+            rect:rect_type!{x_origin,y_origin,x_offset,y_offset},
+            gpage:g_page as usize
+        };
+        (*app).app.sprites.push(sprite);
+        return Some(VarType::Pos((*app).app.sprites.len()));
 
     }
 }
-pub fn selection(p_user_data:*mut c_void,state:&mut SB_State)->usize{
+pub fn selection(p_user_data:*mut c_void,state:&mut SB_State)->Option<VarType>{
     unsafe{
         let mut app=p_user_data as *mut GameApp;
         let msg4=state.value_to_string(0);
@@ -184,6 +182,6 @@ pub fn selection(p_user_data:*mut c_void,state:&mut SB_State)->usize{
             ]
         );
         (*app).text_changed=true;
-        return 0;
+        return None;
     }
 }

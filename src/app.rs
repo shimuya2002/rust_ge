@@ -11,6 +11,7 @@ use crate::texture::*;
 use crate::font::*;
 use crate::geometory::*;
 use crate::anim_set::*;
+use crate::sprite::*;
 include!("./geometory_inc.rs");
 
 /// アプリケーション内で発生したイベントを処理するハンドラー
@@ -22,8 +23,8 @@ pub struct App{
     pub p_app:*mut c_void,
     ///グラフィックページ
     g_pages:Vec<*mut SDL_Texture>,
-    ///管理するアニメーションセット
-    anim_sets:Vec<AnimSet>,
+    ///管理するスプライト
+    pub sprites:Vec<Sprite>,
     ///描画先のグラフィックページ
     render_page:usize,
     ///画面に表示されるグラフィックページ
@@ -78,7 +79,7 @@ impl App{
 # [cfg(not(feature="non_bindings"))]
                 p_app:p_app,
                 g_pages:Vec::new(),
-                anim_sets:Vec::new(),
+                sprites:Vec::new(),
                 render_page:0,
                 display_page:0,
                 image_cache:CacheTbl::new(),
@@ -300,9 +301,6 @@ impl App{
             self.ui_font=Some(font);
         }else if let Err(msg)=ui_font_r{
             println!("{}",msg);
-        }
-        for i in 0..ANIM_SET_NUM{
-            self.anim_sets.push(AnimSet::default());
         }
     }
     ///ライブラリ固有のリソースを破棄する
