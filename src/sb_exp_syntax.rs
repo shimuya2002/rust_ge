@@ -151,6 +151,9 @@ impl SyntaxParser{
                                     }
                                 }
                             },
+                            TypeInfo::NativeFunc(f)=>{
+                                return self.parse_call(&n,lex,cmd);
+                            }
                             _=>{
 
                             }

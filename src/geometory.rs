@@ -71,8 +71,6 @@ pub fn PointInRect(po:&SDL_Point,rect:&RectType)->bool{
            inc_y1 &&
            inc_y2;
 }
-
-
 # [cfg(feature="use_sdl3")]
 pub const ZeroRect:SDL_FRect=SDL_FRect{x:0.0,y:0.0,w:0.0,h:0.0};
 # [cfg(feature="use_sdl2")]

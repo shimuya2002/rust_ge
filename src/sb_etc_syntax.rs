@@ -72,6 +72,7 @@ impl SyntaxParser{
                 TokenType::Ident(name)=>{
                     lex.get();
                     if let Some(mut ti)=self.find(&name){
+
                         let assign_or_lq=lex.peek();
                         if let Some(TokenType::Assign)=assign_or_lq{
                             lex.get();
@@ -91,11 +92,13 @@ impl SyntaxParser{
                             }
                             let exp_r=self.parse_expr(lex,cmd);
                             if let Ok(())=exp_r{
+                                cmd.push(CmdType::Set);
                             }else{
                                 return exp_r;
                             }
                         }else if let Some(TokenType::LQuote)=assign_or_lq{
                             let call_r=self.parse_call(&name,lex,cmd);
+                            cmd.push(CmdType::Pop);
                             if let Ok(())=call_r{
 
                             }else{
@@ -161,6 +164,9 @@ impl SyntaxParser{
                         let mut arg_num=0;
                         loop{
                             if let Some(TokenType::RQuote)=arg_tok{
+                                if 0==arg_num{
+                                    lex.get();
+                                }
                                 break;
                             }
                             arg_num=arg_num+1;

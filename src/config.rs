@@ -2,20 +2,6 @@
 pub const G_PAGE_NUM:usize=8;
 ///描画対象のグラフィックページ(バックバッファ)
 pub const RENDER_GPAGE:usize=0;
-///背景用のグラフィックページ
-pub const BG_GPAGE:usize=1;
-///バストアップ用のグラフィックページ
-pub const BUSTUP_GPAGE:usize=BG_GPAGE+1;
-///テキスト用のグラフィックページ
-pub const TEXT_GPAGE:usize=BUSTUP_GPAGE+1;
-///ウィンドゥ用のグラフィックページ
-pub const UI_GPAGE1:usize=TEXT_GPAGE+1;
-///ポップアップリスト用のグラフィックページ
-pub const UI_GPAGE2:usize=UI_GPAGE1+1;
-///プレイヤーキャラクタ用のグラフィックページ
-pub const PLAYER_CHARA_GPAGE:usize=UI_GPAGE2+1;
-
-pub const ANIM_SET_NUM:usize=32;
 ///ウインドウの横幅
 pub const WND_W:i32=640;
 ///ウインドウの縦幅
@@ -44,15 +30,6 @@ pub const BUTTON_UNUSED:usize=10;
 pub const BUTTON_ZR:usize=11;
 pub const BUTTON_ZL:usize=12;
 
-///左バストアップ
-pub const LEFT_IMAGE:i32=0;
-///右バストアップ
-pub const RIGHT_IMAGE:i32=1;
-///背景
-pub const BG_IMAGE:i32=2;
-pub const PLAYER_CHARA_IMAGE:i32=3;
-pub const TEXT_LOG_NUM:usize=32;
-pub const TEXT_LEN:usize=128;
 ///フォントファイルパス
 pub const FONT_FILE_PATH:&str="./assets/NotoSansJP-Black.ttf";
 ///テキストメッセージのフォントサイズ

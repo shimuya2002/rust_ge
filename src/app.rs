@@ -10,7 +10,6 @@ use crate::cache_tbl::*;
 use crate::texture::*;
 use crate::font::*;
 use crate::geometory::*;
-use crate::anim_set::*;
 use crate::sprite::*;
 include!("./geometory_inc.rs");
 
@@ -19,12 +18,10 @@ include!("./geometory_inc.rs");
 pub type AppEventAction=fn(p_user_data:*mut c_void);
 /// アプリケーションオブジェクト
 pub struct App{
-# [cfg(not(feature="non_bindings"))]
-    pub p_app:*mut c_void,
+
     ///グラフィックページ
-    g_pages:Vec<*mut SDL_Texture>,
-    ///管理するスプライト
-    pub sprites:Vec<Sprite>,
+    pub g_pages:Vec<*mut SDL_Texture>,
+
     ///描画先のグラフィックページ
     render_page:usize,
     ///画面に表示されるグラフィックページ
@@ -66,20 +63,14 @@ impl App{
     pub fn new()->Self{
 
         unsafe{
-            let p_app=if cfg!(feature="non_bindings"){
                 SDL_Init(SDL_INIT_EVERYTHING);
  # [cfg(feature="use_sdl2")]
                 IMG_Init((IMG_InitFlags_IMG_INIT_PNG | IMG_InitFlags_IMG_INIT_JPG) as i32 /*| IMG_INIT_WEBP*/);
                 TTF_Init();
-                null_mut()
-            }else{
-                app_init()
-            };
+                
             return Self{
-# [cfg(not(feature="non_bindings"))]
-                p_app:p_app,
                 g_pages:Vec::new(),
-                sprites:Vec::new(),
+                
                 render_page:0,
                 display_page:0,
                 image_cache:CacheTbl::new(),
@@ -180,12 +171,13 @@ impl App{
                         self.sdl_window=null_mut();
                         return false;
                     }
-                    self.init_resources(w,h);
+                    self.init_resources();
                     SDL_initFramerate(&mut self.sdl_fps_manager);
                     SDL_setFramerate(&mut self.sdl_fps_manager,DEF_FRAME_RATE);
                     if let Some(f)=self.on_init{
                         f(self.p_ud);
                     }
+                    ui_init(self.sdl_window,self.sdl_renderer);
                     return true;
                 }else{
                     SDL_framerateDelay(&mut self.sdl_fps_manager);
@@ -198,7 +190,8 @@ impl App{
                         let event_type=self.sdl_event.type_ as i32;
  # [cfg(not(target_os="windows"))]                        
                         let event_type=self.sdl_event.type_;
-
+                        
+                        ui_poll_events(&mut self.sdl_event);
                         match event_type{
                             SDL_QUIT_EVENT_VALUE=>{
                                 if let Some(f)=self.on_term{
@@ -245,9 +238,6 @@ impl App{
                     return true;
                 }
             }else{
- # [cfg(not(feature="non_bindings"))]
-                return 0!=run_step(self.p_app,w,h);
- # [cfg(feature="non_bindings")]
                 return false;
             };
 
@@ -256,8 +246,40 @@ impl App{
     ///* ライブラリ固有のリソースを初期化する
     ///* 'w' 画面の横幅
     ///* 'h' 画面の縦幅
-    pub fn init_resources(&mut self,w:i32,h:i32){
-        for i in 0..G_PAGE_NUM{
+    pub fn init_resources(&mut self){
+        
+        let msg_font_r=Font::new(FONT_FILE_PATH,MSG_TEXT_SIZE);
+        if let Ok(font)=msg_font_r{
+            self.msg_font=Some(font);
+        }else if let Err(msg)=msg_font_r{
+            println!("{}",msg);
+        }
+        let ui_font_r=Font::new(FONT_FILE_PATH,UI_TEXT_SIZE);
+        if let Ok(font)=ui_font_r{
+            self.ui_font=Some(font);
+        }else if let Err(msg)=ui_font_r{
+            println!("{}",msg);
+        }
+    }
+    ///ライブラリ固有のリソースを破棄する
+    pub fn deinit_resources(&mut self){
+        self.ui_font=None;
+        self.msg_font=None;
+        self.image_cache.clear();
+        for i in &self.g_pages{
+            unsafe{
+                if null_mut()!=*i{
+                    SDL_DestroyTexture(*i);
+
+                }
+            }
+        }
+
+    }
+    pub fn create_gpages(&mut self,n:usize,w:i32,h:i32){
+        self.g_pages.clear();
+        self.dirty_rect_tbl.clear();
+        for i in 0..n{
             unsafe{
  # [cfg(feature="non_bindings")]
                 let renderer=self.sdl_renderer;
@@ -290,34 +312,6 @@ impl App{
             }
 
         }
-        let msg_font_r=Font::new(FONT_FILE_PATH,MSG_TEXT_SIZE);
-        if let Ok(font)=msg_font_r{
-            self.msg_font=Some(font);
-        }else if let Err(msg)=msg_font_r{
-            println!("{}",msg);
-        }
-        let ui_font_r=Font::new(FONT_FILE_PATH,UI_TEXT_SIZE);
-        if let Ok(font)=ui_font_r{
-            self.ui_font=Some(font);
-        }else if let Err(msg)=ui_font_r{
-            println!("{}",msg);
-        }
-    }
-    ///ライブラリ固有のリソースを破棄する
-    pub fn deinit_resources(&mut self){
-        self.ui_font=None;
-        self.msg_font=None;
-        self.image_cache.clear();
-        for i in &self.g_pages{
-            unsafe{
-                if null_mut()!=*i{
-                    SDL_DestroyTexture(*i);
-
-                }
-            }
-        }
-        self.g_pages.clear();
-        self.dirty_rect_tbl.clear();
     }
     /// キー押下解除処理を行う
     ///* 'key_code' 押下されたキーコード
@@ -427,29 +421,29 @@ impl App{
                 });
         }
     }
+    ///情報メッセージをログ出力する
+    /// 'msg' 出力するメッセージ
+    pub fn log_info(&self,msg:&str){
+        self.log_str_info(&msg.to_string());
+    }
+    pub fn log_str_info(&self,msg:&String){
+        unsafe{
+            let txt_cstr=CString::new(msg.to_string()).expect("");
+            SDL_LogInfo(0,txt_cstr.as_ptr());
+        }
+
+    }
 }
 impl Drop for App{
     ///ドロップ処理
     fn drop(&mut self){
         unsafe{
- # [cfg(feature="non_bindings")]
+                ui_quit();
                 TTF_Quit();
- # [cfg(feature="non_bindings")]
  # [cfg(feature="use_sdl2")]
                 IMG_Quit();
- # [cfg(feature="non_bindings")]
                 SDL_Quit();
 
- # [cfg(not(feature="non_bindings"))]
-                if null_mut()!=self.p_app
-                {
- # [cfg(not(feature="non_bindings"))]
-                        app_quit(self.p_app);
- # [cfg(not(feature="non_bindings"))]
-                        self.p_app=null_mut();
-
-                    
-                }
 
             
         }

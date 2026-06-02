@@ -22,30 +22,26 @@ impl App{
     /// 'x' ロード先のX座標
     /// 'y' ロード先のY座標
     /// 'path' ロードする画像ファイルへのパス
-    pub fn load_image(&mut self,x:i32,y:i32,path:&str){
+    pub fn load_image(&mut self,x:i32,y:i32,path:&str)->Result<bool,String>{
         let file_path=path.to_string();
         let mut image=self.image_cache.get(&file_path);
         if let None=image{
 
             unsafe{
- # [cfg(feature="non_bindings")]
             let renderer=self.sdl_renderer;
- # [cfg(not(feature="non_bindings"))]
-            let renderer=get_sdl_renderer(self.p_app);
 
-                println!("load");
+
                 let result=Texture::load(renderer,path);
                 if let Ok(t)=result{
                     self.image_cache.insert(&file_path,Rc::new(t));
                     image=self.image_cache.get(&file_path);
                 }else if let Err(msg)=result{
-                    println!("{}",msg);
+                    return Err(msg);
                 }
 
             }
         }
         if let Some(mut t)=image{
-            println!("A");
             let im_ref:&Texture=Rc::borrow(&t);
             let dst_w=min(WND_W-x,im_ref.w);
             let dst_h=min(WND_H-y,im_ref.h);
@@ -70,15 +66,13 @@ impl App{
 
             }
         }
+        return Ok(true);
         
     }
     ///グラフィックページの消去を行う
     pub fn clear(&mut self){
         unsafe{
- # [cfg(feature="non_bindings")]
             let renderer=self.sdl_renderer;
- # [cfg(not(feature="non_bindings"))]
-            let renderer=get_sdl_renderer(self.p_app);
 
             SDL_SetRenderDrawColor(renderer,0,0,0,0xFF);
             SDL_RenderClear(renderer);
@@ -88,24 +82,27 @@ impl App{
     ///画面の更新を行う
     pub fn update_screen(&mut self){
         unsafe{
- # [cfg(feature="non_bindings")]
             let renderer=self.sdl_renderer;
- # [cfg(not(feature="non_bindings"))]
-            let renderer=get_sdl_renderer(self.p_app);
 
             SDL_SetRenderTarget(renderer,null_mut());
             SDL_SetRenderDrawColor(renderer,0,0,0,0xFF);
             SDL_RenderClear(renderer);
- # [cfg(feature="use_sdl3")]
-            SDL_RenderTexture(renderer,
-                self.g_pages[self.display_page],
-                null_mut(),
-                null_mut());
- # [cfg(feature="use_sdl2")]
-            SDL_RenderCopy(renderer,
-                self.g_pages[self.display_page],
-                null_mut(),
-                null_mut());
+            if self.display_page<self.g_pages.len(){
+    # [cfg(feature="use_sdl3")]
+                SDL_RenderTexture(renderer,
+                    self.g_pages[self.display_page],
+                    null_mut(),
+                    null_mut());
+    # [cfg(feature="use_sdl2")]
+                SDL_RenderCopy(renderer,
+                    self.g_pages[self.display_page],
+                    null_mut(),
+                    null_mut());
+
+                    
+            }
+
+            ui_render(renderer);
 
  # [cfg(feature="use_sdl3")]
             SDL_FlushRenderer(renderer);
@@ -226,10 +223,7 @@ impl App{
             let mut g:u8=0;
             let mut b:u8=0;
             let mut a:u8=0;
- # [cfg(feature="non_bindings")]
             let renderer=self.sdl_renderer;
- # [cfg(not(feature="non_bindings"))]
-            let renderer=get_sdl_renderer(self.p_app);
             SDL_GetRenderDrawColor(renderer,&mut r,&mut g,&mut b,&mut a);
 
  # [cfg(feature="use_sdl3")]
@@ -254,10 +248,7 @@ impl App{
             let mut g:u8=0;
             let mut b:u8=0;
             let mut a:u8=0;
- # [cfg(feature="non_bindings")]
             let renderer=self.sdl_renderer;
- # [cfg(not(feature="non_bindings"))]
-            let renderer=get_sdl_renderer(self.p_app);
             SDL_GetRenderDrawColor(renderer,&mut r,&mut g,&mut b,&mut a);
 
  # [cfg(feature="use_sdl3")]
@@ -307,10 +298,7 @@ impl App{
                 let surf=font.render_utf8(txt,(WND_W-x) as u32);
                 let src_rect=rect_type!{0,0,(*surf).w,(*surf).h};
                 let dst_rect=rect_type!{x,y,(*surf).w,(*surf).h};
- # [cfg(feature="non_bindings")]
                 let renderer=self.sdl_renderer;
- # [cfg(not(feature="non_bindings"))]
-                let renderer=get_sdl_renderer(self.p_app);
                 let t_r=Texture::from_surface(renderer,surf);
  # [cfg(feature="use_sdl3")]
                 SDL_DestroySurface(surf);                

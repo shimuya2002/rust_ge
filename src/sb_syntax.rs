@@ -8,13 +8,14 @@ use std::ops::*;
 use std::fmt;
 use crate::sb_cmdtype::*;
 use crate::sb_lexer::*;
-
+#[derive(Clone)]
 pub enum TypeInfo{
     Var(usize),
     Share(String),
     Const(VarType),
     Label(Option<usize>),
-    NativeFunc(Option<NativeFuncType>)
+    NativeFunc(Option<NativeFuncType>),
+   
     
 }
 impl fmt::Display for TypeInfo{
@@ -122,7 +123,7 @@ impl SyntaxParser{
         return format!("Needs \"then\" not {}",tok);
     }
     fn gen_already_defined(name:&String)->String{
-        return format!("Ident {} redefined",name);
+        return format!("Ident {} is undefined",name);
     }
     fn gen_not_defined(name:&String)->String{
         return format!("Ident {} not defined",name);

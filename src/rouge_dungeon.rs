@@ -1,17 +1,19 @@
 use std::cmp::*;
+use std::rc::*;
 
 use crate::imports::*;
 use crate::config::*;
 use crate::geometory::*;
 use crate::app::*;
-
+use crate::sprite::*;
 include!("./geometory_inc.rs");
 /// ローグ型ダンジョン
 pub struct RougeDungon{
     rooms:[RectType;ROUGE_ROOM_MAX],
     room_num:usize,
     render_rect:RectType,
-    floor:[u8;(ROUGE_ROOM_MAX_W*ROUGE_ROOM_MAX_H) as usize]
+    floor:[u8;(ROUGE_ROOM_MAX_W*ROUGE_ROOM_MAX_H) as usize],
+    player_image:Option<Rc<Sprite>>,
 }
 
 impl RougeDungon{
@@ -21,16 +23,20 @@ impl RougeDungon{
             rooms:[ZeroRect;ROUGE_ROOM_MAX],
             room_num:0,
             render_rect:ZeroRect,
-            floor:[0;(ROUGE_ROOM_MAX_W*ROUGE_ROOM_MAX_H) as usize]
+            floor:[0;(ROUGE_ROOM_MAX_W*ROUGE_ROOM_MAX_H) as usize],
+            player_image:None
         };
     }
     pub fn set_render_rect(&mut self,rect:&RectType){
         self.render_rect=*rect;
     }
     pub fn render(&self,app:&mut App){
+        app.set_gpage(0,0);
+        app.clear();
         app.set_draw_color(255,255,255,255);
         let block_w=(self.render_rect.w as i32)/ROUGE_ROOM_MAX_W;
         let block_h=(self.render_rect.h as i32)/ROUGE_ROOM_MAX_H;
+
         for i in 0..ROUGE_ROOM_MAX_H{
             for j in 0..ROUGE_ROOM_MAX_W{
                 if 0!=self.floor[(i*(ROUGE_ROOM_MAX_W as i32)+j) as usize]{
@@ -43,6 +49,7 @@ impl RougeDungon{
             }
         }
     }
+    pub fn update(&mut self,app:&mut App){}
     pub fn reset(&mut self){
         self.room_num=0;
         for i in 0..self.rooms.len(){
@@ -58,7 +65,7 @@ impl RougeDungon{
             let t_room_r=(t_room.x+t_room.w) as usize;
             let t_room_t=t_room.y as usize;
             let t_room_b=(t_room.y+t_room.h) as usize;
-            println!("{},{},{},{}",t_room_l,t_room_t,t_room_r-t_room_l,t_room_b-t_room_t);
+            //println!("{},{},{},{}",t_room_l,t_room_t,t_room_r-t_room_l,t_room_b-t_room_t);
             
             for j in t_room_t..t_room_b{
                 for k in t_room_l..t_room_r{
@@ -66,7 +73,7 @@ impl RougeDungon{
                 }
             }
         }
-        println!("");
+        //println!("");
         for i in 1..self.room_num{
             let t_room1=self.rooms[i-1];
             let t_room2=self.rooms[i];
@@ -165,5 +172,11 @@ impl RougeDungon{
             }
         }
 
+    }
+    pub fn update_finished(&self)->bool{
+        return true;
+    }
+    pub fn set_player_image(&mut self,image:Option<Rc<Sprite>>){
+        self.player_image=image;
     }
 }

@@ -11,26 +11,41 @@
 	#include<SDL3_framerate.h>
 	#include<SDL3_imageFilter.h>
 	#include<SDL3_rotozoom.h>
+	#include<SDL3_Image/SDL_image.h>
+	#include<SDL3_ttf/SDL_ttf.h>
 
 #endif
-#include<SDL_image.h>
-#include<SDL_ttf.h>
 
 //#include"app.hpp"
-typedef void (*OnPaint)(void*);
-typedef void (*OnQuit)(void*); 
-typedef void (*OnInit)(void*);
+
 #ifdef __cplusplus
 extern"C"{
 #endif
-	void* app_init();
-	void app_quit(void*);
-	int run_step(void*,int,int);
-	SDL_Renderer* get_sdl_renderer(void* p);
-	void set_on_paint(void*,OnPaint);
-	void set_on_quit(void*,OnQuit);
-	void set_on_init(void*,OnInit);
-	void set_ud(void*,void* p);
+	void ui_init(SDL_Window* pWindow,SDL_Renderer* pRenderer);
+	void ui_poll_events(SDL_Event* pEvent);
+	void ui_quit();
+	void ui_begin(const char* lpszCaption);
+	void ui_end();
+	void ui_text(const char* lpszCaption);
+	void ui_checkbox(const char* lpszCaption,bool* pFlag);
+	bool ui_button(const char* lpszCaption);
+	void ui_sameline();
+	void ui_newline();
+	void ui_space();
+	void ui_begin_frame();
+	void ui_end_frame();
+	void ui_render(SDL_Renderer* pRenderer);
+	bool ui_begin_main_menubar();
+	void ui_end_main_menubar();
+	bool ui_begin_menu(const char* lpszCaption);
+	void ui_end_menu();
+	bool ui_menu_item(const char* lpszCaption);
+	bool ui_begin_listbox(const char* lpszID,int w,int h);
+	void ui_end_listbox();
+	bool ui_selectable(const char* lpszCaption,bool isSelected);
+	void ui_image(SDL_Texture* lpTexture,int w,int h);
+	void ui_subimage(SDL_Texture* lpTexture,int w,int h,float l,float t,float r,float b);
+
 #ifdef __cplusplus
 }
 #endif

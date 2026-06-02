@@ -12,7 +12,7 @@ use std::path::PathBuf;
 
  #[cfg(feature="use_sdl3")]
  #[cfg(target_os="windows")]
- const SDL_IMAGE_IMPORT_PATH:&str="C:\\Users\\shimu\\Documents\\SDL3_image-3.4.0\\include\\SDL3_image";
+ const SDL_IMAGE_IMPORT_PATH:&str="C:\\Users\\shimu\\Documents\\SDL3_image-3.4.0\\include";
  #[cfg(feature="use_sdl3")]
  #[cfg(not(target_os="windows"))]
  const SDL_IMAGE_IMPORT_PATH:&str="/opt/local/include/SDL3_image";
@@ -21,7 +21,7 @@ use std::path::PathBuf;
 
  #[cfg(feature="use_sdl3")]
  #[cfg(target_os="windows")]
- const SDL_TTF_IMPORT_PATH:&str="C:\\Users\\shimu\\Documents\\SDL3_ttf-3.1.0\\include\\SDL3_ttf";
+ const SDL_TTF_IMPORT_PATH:&str="C:\\Users\\shimu\\Documents\\SDL3_ttf-3.1.0\\include";
  #[cfg(feature="use_sdl3")]
  #[cfg(not(target_os="windows"))]
  const SDL_TTF_IMPORT_PATH:&str="/opt/local/include/SDL3_ttf";
@@ -38,13 +38,16 @@ use std::path::PathBuf;
  const SDL_GFX_IMPORT_PATH:&str="/opt/local/include";
 
 fn main(){
-    if cfg!(not(feature="non_bindings")){
-        println!("cargo::rerun-if-changed={}","./target/cmake/SDL2_ffi/libSDL2_ffi.a");
-        println!("cargo:rustc-link-search={}","./target/cmake");
-        println!("cargo:rustc-link-lib={}","SDL2_ffi");
+    println!("cargo::rerun-if-changed={}","./Cargo.toml");
+    if cfg!(feature="use_sdl3"){
+        println!("cargo::rerun-if-changed={}","./target/cmake/Debug/SDL3_ffi.lib");
+        println!("cargo:rustc-link-search={}","./target/cmake/Debug");
+        println!("cargo:rustc-link-lib={}","SDL3_ffi");
 
     }else{
-        println!("cargo::rerun-if-changed={}","./Cargo.toml");
+        println!("cargo::rerun-if-changed={}","./target/cmake/Debug/SDL2_ffi.lib");
+        println!("cargo:rustc-link-search={}","./target/cmake/Debug");
+        println!("cargo:rustc-link-lib={}","SDL2_ffi");
 
     }
     if cfg!(not(target_os="windows")){
@@ -54,6 +57,7 @@ fn main(){
 
     }else{
         println!("cargo:rustc-link-search={}","C:\\Users\\shimu\\Documents\\library");
+        println!("cargo:rustc-link-lib={}","msvcrtd");
 
     }
     if cfg!(feature="use_sdl3"){

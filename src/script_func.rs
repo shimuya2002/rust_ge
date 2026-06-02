@@ -129,7 +129,8 @@ pub fn create_sprite(p_user_data:*mut c_void,state:&mut SB_State)->Option<VarTyp
         println!("{},{},{},{},{}",g_page,x_origin,y_origin,x_offset,y_offset);
         let sprite=Sprite{
             rect:rect_type!{x_origin,y_origin,x_offset,y_offset},
-            gpage:g_page as usize
+            gpage:g_page as usize,
+            render_mode:GPageRenderMode::Norm,
         };
         (*app).app.sprites.push(sprite);
         return Some(VarType::Pos((*app).app.sprites.len()));

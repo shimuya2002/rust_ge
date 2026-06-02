@@ -497,7 +497,7 @@ impl GameApp{
     }
 
     pub fn load_script(&mut self,file_path:String,p_ud:*mut c_void)->Result<(),String>{
-        let r=SB_State::load_from_file(&file_path);
+        let r=SB_State::load_from_file(&file_path,None);
         if let Ok(mut s)=r{
             s.p_user_data=p_ud;
             self.script=Some(s);
